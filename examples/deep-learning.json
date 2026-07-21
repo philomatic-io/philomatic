@@ -1,0 +1,157 @@
+{
+  "version": 2,
+
+  "learners": [
+    { "id": "lnr_default", "displayName": "Ada" },
+    { "id": "lnr_prof", "displayName": "Prof. Turing", "profile": { "role": "instructor", "field": "CS" } }
+  ],
+
+  "concepts": [
+    { "name": "Linear Algebra", "description": "Vectors, matrices, and linear maps.", "aliases": ["Matrix Algebra"], "tags": ["#difficulty:2", "#domain:math"] },
+    { "name": "Derivative", "description": "The instantaneous rate of change of a function.", "tags": ["#difficulty:2", "#domain:math"] },
+    { "name": "Gradient Descent", "description": "First-order iterative optimization by following the negative gradient.", "prerequisites": ["Derivative"], "analogousTo": ["Derivative"], "tags": ["#difficulty:3", "#domain:ml"] },
+    { "name": "Backpropagation", "description": "Reverse-mode automatic differentiation over a computational graph.", "prerequisites": ["Gradient Descent"], "evidenceFor": ["Neural Network"], "tags": ["#difficulty:4", "#domain:ml"] },
+    { "name": "Neural Network", "description": "A composable, differentiable function approximator.", "prerequisites": ["Linear Algebra", "Backpropagation"], "tags": ["#difficulty:4", "#domain:ml"] },
+    { "name": "Attention Mechanism", "description": "Content-based weighted aggregation over a set of representations.", "prerequisites": ["Neural Network"], "tags": ["#difficulty:5", "#domain:ml"] }
+  ],
+
+  "sources": [
+    {
+      "id": "src_dlbook_ch6",
+      "title": "Deep Learning (Goodfellow et al.), Ch. 6",
+      "author": "Goodfellow, Bengio, Courville",
+      "directUrl": "https://www.deeplearningbook.org/contents/mlp.html",
+      "modality": "text",
+      "estimatedDurationMins": 90,
+      "explains": ["Backpropagation", "Neural Network"],
+      "tags": ["#difficulty:4", "#rigor:high"],
+      "snippets": [
+        {
+          "text": "The chain rule of calculus is used to compute the derivatives of functions formed by composing other functions whose derivatives are known.",
+          "clarifies": ["Backpropagation"],
+          "note": "This is the whole trick — backprop is just the chain rule applied to the computational graph.",
+          "sentiment": "aha",
+          "tags": ["#key"]
+        },
+        {
+          "text": "We assume the loss function is differentiable everywhere.",
+          "contradicts": ["Backpropagation"],
+          "note": "But ReLU isn't differentiable at 0 — how is that handled in practice?",
+          "sentiment": "confused",
+          "raises": ["How is backpropagation defined where the activation is non-differentiable (e.g. ReLU at 0)?"]
+        }
+      ]
+    },
+    {
+      "id": "src_3b1b_backprop",
+      "title": "3Blue1Brown: Backpropagation calculus",
+      "author": "Grant Sanderson",
+      "directUrl": "https://www.youtube.com/watch?v=tIeHLnjs5U8",
+      "modality": "video",
+      "estimatedDurationMins": 10,
+      "demonstrates": ["Backpropagation"],
+      "tags": ["#visual", "#difficulty:2"],
+      "snippets": [
+        {
+          "text": "Each weight's influence on the cost is a product of terms along the path back to it.",
+          "clarifies": ["Backpropagation"],
+          "sentiment": "aha"
+        }
+      ]
+    },
+    {
+      "id": "src_khan_deriv",
+      "title": "Khan Academy: Derivatives intro",
+      "directUrl": "https://www.khanacademy.org/math/calculus-1/cs1-derivatives-definition",
+      "modality": "video",
+      "estimatedDurationMins": 15,
+      "explains": ["Derivative"],
+      "exercises": ["Derivative"],
+      "tags": ["#beginner"]
+    },
+    {
+      "id": "src_gd_lab",
+      "title": "Interactive Gradient Descent Lab",
+      "directUrl": "https://example.edu/labs/gradient-descent",
+      "modality": "interactive",
+      "estimatedDurationMins": 30,
+      "demonstrates": ["Gradient Descent"],
+      "exercises": ["Gradient Descent"]
+    },
+    {
+      "id": "src_attention",
+      "title": "Attention Is All You Need",
+      "author": "Vaswani et al.",
+      "directUrl": "https://arxiv.org/abs/1706.03762",
+      "bibliographicUrl": "https://doi.org/10.5555/3295222.3295349",
+      "modality": "text",
+      "estimatedDurationMins": 60,
+      "explains": ["Attention Mechanism"],
+      "tags": ["#seminal", "#difficulty:5"]
+    },
+    {
+      "id": "src_opt_survey",
+      "title": "A Survey of Optimization for Deep Learning",
+      "modality": "text",
+      "estimatedDurationMins": 45,
+      "explains": ["Gradient Descent"],
+      "answers": ["Why does gradient descent converge?", "How do optimizers work?"],
+      "tags": ["#survey"]
+    }
+  ],
+
+  "questions": [
+    {
+      "text": "Why does gradient descent converge?",
+      "description": "Under what conditions (convexity, step size) is convergence guaranteed?",
+      "about": ["Gradient Descent"],
+      "refines": ["How do optimizers work?"],
+      "tags": ["#foundational"]
+    },
+    { "text": "How do optimizers work?", "about": ["Gradient Descent"] },
+    { "text": "What makes attention scale better than recurrence?", "about": ["Attention Mechanism"] }
+  ],
+
+  "syllabi": [
+    {
+      "title": "Intro to Deep Learning",
+      "creatorId": "lnr_prof",
+      "goal": "Understand how neural networks learn, end to end.",
+      "framework": "conceptual-first",
+      "tags": ["#level:intro"],
+      "includes": ["Linear Algebra", "Derivative", "Gradient Descent", "Backpropagation", "Neural Network"],
+      "includeSources": ["Khan Academy: Derivatives intro", "Deep Learning (Goodfellow et al.), Ch. 6"],
+      "order": [
+        "Khan Academy: Derivatives intro",
+        "Interactive Gradient Descent Lab",
+        "3Blue1Brown: Backpropagation calculus",
+        "Deep Learning (Goodfellow et al.), Ch. 6"
+      ]
+    },
+    {
+      "title": "Advanced Attention",
+      "creatorId": "lnr_prof",
+      "goal": "A deep dive on transformer architectures.",
+      "includes": ["Attention Mechanism"],
+      "includeSources": ["Attention Is All You Need"]
+    }
+  ],
+
+  "events": [
+    { "learnerId": "lnr_default", "verb": "TRACKS", "targetType": "concept", "targetId": "cpt_gradient-descent", "occurredAt": 1719792000000 },
+    { "learnerId": "lnr_default", "verb": "TRACKS", "targetType": "concept", "targetId": "cpt_backpropagation", "occurredAt": 1719792100000 },
+    { "learnerId": "lnr_default", "verb": "CONSUMED", "targetType": "source", "targetId": "src_khan_deriv", "occurredAt": 1719800000000 },
+    { "learnerId": "lnr_default", "verb": "CONSUMED", "targetType": "source", "targetId": "src_gd_lab", "occurredAt": 1719900000000 },
+    { "learnerId": "lnr_default", "verb": "CONSUMED", "targetType": "source", "targetId": "src_3b1b_backprop", "occurredAt": 1720000000000 },
+    { "learnerId": "lnr_default", "verb": "STAGED", "targetType": "source", "targetId": "src_attention", "occurredAt": 1720100000000 }
+  ],
+
+  "edges": [
+    { "srcType": "source", "srcId": "src_dlbook_ch6", "type": "LINK", "dstType": "source", "dstId": "src_opt_survey", "tags": [{ "name": "RefersTo" }] },
+    { "srcType": "source", "srcId": "src_opt_survey", "type": "LINK", "dstType": "source", "dstId": "src_dlbook_ch6", "tags": [{ "name": "Expands" }] },
+    { "srcType": "source", "srcId": "src_3b1b_backprop", "type": "LINK", "dstType": "source", "dstId": "src_dlbook_ch6", "tags": [{ "name": "DerivativeOf" }] },
+    { "srcType": "track", "srcId": "syl_intro-to-deep-learning", "type": "INCLUDES", "dstType": "source", "dstId": "src_dlbook_ch6", "tags": [{ "name": "Seminal" }] },
+    { "srcType": "track", "srcId": "syl_intro-to-deep-learning", "type": "PREREQUISITE_OF_SYL", "dstType": "track", "dstId": "syl_advanced-attention", "tags": [] },
+    { "srcType": "track", "srcId": "syl_advanced-attention", "type": "LINK", "dstType": "track", "dstId": "syl_intro-to-deep-learning", "tags": [{ "name": "Complements" }] }
+  ]
+}

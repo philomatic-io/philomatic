@@ -1,0 +1,15 @@
+# Keep the build context small and deterministic: no local state, no build artifacts
+# (the image installs and builds its own), no VCS.
+.git
+node_modules
+**/node_modules
+.philomatic
+ui/dist
+dist-extension
+dist
+obsidian/main.js
+obsidian/data.json
+archived
+Dockerfile
+docker-compose.yml
+.dockerignore

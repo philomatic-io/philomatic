@@ -1,0 +1,41 @@
+{
+  "framework": "defeasible-deontic",
+  "version": 0,
+  "status": "DRAFT — NOT REGISTERED. Design notes only; src/framework/index.ts deliberately does not load this file.",
+  "description": "DRAFT. Defeasible deontic logic over normative texts — model a statute, code of ethics, or rule-book as passages, then QUERY it: what is obligatory here, what is permitted, which rule wins when two conflict. The modeling half is expressible with today's machinery (rules are snippets; norms are snippet→concept tags; defeat is rule→rule, plain binary LINK — no reification needed because rules are entities). The QUERY half is deliberately out of scope for the framework file: it is an enrich-side ADAPTER (implementation_plan_mvp.md, Source Adapters) that exports the tagged subgraph as an answer-set program (clingo), runs the solver, and returns answer sets as view-only candidates — precedence user > solver, never authoritative writes. Translation sketch: each #Obliges/#Permits/#Forbids edge becomes a defeasible rule head obliged(Act) etc.; #ExceptionTo becomes an exception literal in the defeated rule's body; #Defeats becomes a superiority relation (as in Gordon/Prakken-style formalisms). BLOCKED ON: F1 (lint: a #Defeats cycle, an exception targeting a non-rule) and F2 (hooks: run-solver-on-change) — ROADMAP §2.4 — plus the adapter runtime. Do not register until at least the lint half exists; served vocabulary users can tag with but nothing checks is a trap.",
+  "edgeTags": [
+    {
+      "name": "Obliges",
+      "on": {
+        "type": "CLARIFIES",
+        "srcKind": "snippet",
+        "dstKind": "concept"
+      },
+      "direction": "directed",
+      "description": "DRAFT — WRONG SHAPE ON PURPOSE, see notes: a norm passage obliging an act-concept wants snippet→concept, but CLARIFIES/CONTRADICTS are polarity primitives and ABOUT excludes snippets. Registering this framework requires deciding the norm→act edge: extend ABOUT to snippet→concept, or make norms concepts. This unresolved selector is the main open design question"
+    },
+    {
+      "name": "Defeats",
+      "on": {
+        "type": "LINK",
+        "srcKind": "snippet",
+        "dstKind": "snippet"
+      },
+      "direction": "directed",
+      "inverseLabel": "defeated by",
+      "description": "DRAFT: this rule-passage takes priority over that one when both apply (lex specialis, lex superior — the superiority relation the solver consumes)"
+    },
+    {
+      "name": "ExceptionTo",
+      "on": {
+        "type": "LINK",
+        "srcKind": "snippet",
+        "dstKind": "snippet"
+      },
+      "direction": "directed",
+      "inverseLabel": "has exception",
+      "description": "DRAFT: this passage carves out a case where that rule does not apply — compiles to an exception literal in the target rule's body, not a contrary conclusion (the defeasible-logic distinction between undercutting and rebutting)"
+    }
+  ],
+  "metadataFields": []
+}

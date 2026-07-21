@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "sources": [
+    { "title": "Syllabus & Course Overview", "modality": "text", "estimatedDurationMins": 15 },
+    { "title": "Lecture 1: Foundations", "modality": "video", "estimatedDurationMins": 50 },
+    { "title": "Lecture 2: Core Mechanisms", "modality": "video", "estimatedDurationMins": 50 },
+    { "title": "Problem Set 1", "modality": "interactive", "estimatedDurationMins": 90 }
+  ],
+  "tracks": [
+    {
+      "title": "Intro Systems, Fall",
+      "goal": "Read/watch in this order — no concept graph needed.",
+      "order": [
+        "Syllabus & Course Overview",
+        "Lecture 1: Foundations",
+        "Lecture 2: Core Mechanisms",
+        "Problem Set 1"
+      ]
+    }
+  ]
+}

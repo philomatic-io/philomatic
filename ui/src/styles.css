@@ -1,0 +1,3063 @@
+/* Philomatic workbench (redesign) — dark, Inter, purple accent. Tokens lifted from the
+   agreed mockup. All local, zero external requests (isolation guarantee): system-stack fonts,
+   Inter if the OS has it. */
+:root {
+  --bg: #161826;
+  --surface: #232532;
+  --surface-2: #1c1e2b;
+  --text: #e9e9ed;
+  --muted: #9397ab;
+  --faint: #75798c;
+  --accent: #9184d9;
+  --accent-soft: #b5abfc;
+  --accent-bg: #2b2741;
+  --divider: color-mix(in srgb, #e9e9ed 14%, transparent);
+  --line: #3f424d;
+  --line-strong: #595d6c;
+  --chip-bg: #2b2d3a;
+  --chip-border: #3f424d;
+  --danger: #e07a63;
+  --ok: #7fcf9f;
+  --raised: #e0b15e; /* amber — a question raised by a snippet */
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+  --shadow-md: 0 0 0 1px #595d6c, 0 6px 18px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 0 0 1px #9397ab, 0 16px 40px rgba(0, 0, 0, 0.65);
+
+  /* Node-kind accents (shared by list glyphs, chips, and the map). */
+  --k-track: #d2cefd;
+  --k-concept: #8fd0c4;
+  --k-source: #9184d9;
+  --k-snippet: #e6c47a;
+  --k-question: #e39ca8;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+h1,
+h2,
+h3 {
+  font-weight: 500; /* Nocturne: hierarchy is size + space, never weight past 500 */
+  margin: 0;
+}
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+a {
+  color: var(--accent-soft);
+}
+/* Nocturne: themed focus, never the default blue ring. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+::selection {
+  background: var(--accent-bg);
+}
+
+/* Minimal, sleek scrollbars — thin, no buttons, a subtle thumb that lifts on hover. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text) 20%, transparent) transparent;
+}
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text) 18%, transparent);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--text) 34%, transparent);
+  background-clip: padding-box;
+}
+code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+}
+
+/* Next reading (experiment): the two live moves from a source — deeper / wider. */
+.next-moves {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.next-track {
+  color: var(--faint);
+  font-size: 0.74rem;
+  margin-top: 0.2rem;
+}
+.next-move {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.32rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--faint);
+}
+.next-move-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.next-move:hover {
+  border-color: var(--line-strong);
+}
+.next-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+.next-title {
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 0.85rem;
+  padding: 0;
+  text-align: left;
+}
+.next-title:hover {
+  color: var(--accent-soft);
+}
+
+/* Publication topics (concept-anchored bundles): the outline look on the public page. */
+.pub-topic + .pub-topic {
+  border-top: 1px solid var(--divider);
+  padding-top: 1rem;
+}
+.pub-topic {
+  margin-top: 1rem;
+}
+.pub-topic-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.pub-topic-n {
+  color: var(--faint);
+  font-size: 0.85rem;
+  min-width: 1rem;
+  text-align: right;
+}
+.pub-topic-icon {
+  display: inline-flex;
+  color: var(--k-concept);
+}
+.pub-topic-name {
+  color: var(--k-concept);
+  font-size: 1.05rem;
+}
+.pub-topic-empty {
+  color: var(--faint);
+  font-style: italic;
+  font-size: 0.85rem;
+  margin: 0 0 0 1.5rem;
+}
+
+/* Journey rows: fixed number gutter + right-edge read pill = aligned columns. */
+.col-row-title .path-num {
+  flex: none;
+  min-width: 1.1rem;
+  text-align: right;
+}
+.row-read {
+  margin-left: auto; /* right-aligns when it's the first right-side element */
+  flex: none;
+  font-size: 0.62rem;
+  padding: 0 7px;
+  cursor: pointer;
+}
+/* When tools precede the pill, THEY take the auto margin. */
+.row-tools + .row-read,
+.row-read + .row-tools {
+  margin-left: 0.15rem;
+}
+/* Expanded concept sub-rows (Journey concept lens). */
+.col-row.concept-sub {
+  padding-left: 2.1rem;
+}
+.col-row.concept-sub .row-title-text {
+  font-size: 0.85rem;
+}
+.concept-sub-empty {
+  padding: 0.1rem 0 0.3rem 2.3rem;
+  font-size: 0.78rem;
+}
+.concept-count {
+  color: var(--faint);
+  font-size: 0.72rem;
+}
+/* Concept lens: break rulers between topic groups; N.M numbers get more room. */
+.lens-group + .lens-group {
+  border-top: 1px solid var(--divider);
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+}
+.path-num.lens-num {
+  min-width: 1.7rem;
+}
+
+/* Journey row tools (× / ↑↓): quiet until the row is hovered. */
+.row-tools {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 0.15rem;
+  flex: none;
+  /* rendered only in edit mode — always visible there */
+  opacity: 1;
+}
+/* Open-in-Library (Books) — present on every concept row, revealed on hover. */
+.row-open {
+  margin-left: auto;
+  flex: none;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.col-row:hover .row-open {
+  opacity: 1;
+}
+.row-open + .row-tools {
+  margin-left: 0.1rem;
+}
+.row-tools .path-x {
+  padding: 0 3px;
+  /* the CONTAINER gates visibility here (hover / edit mode); the Library's per-× base
+     opacity:0 + .path-row:hover reveal doesn't apply to Journey rows */
+  opacity: 1;
+}
+/* Edit mode: the remove-× reads as destructive. */
+.journey.editing .x-del {
+  color: var(--danger);
+}
+
+/* Concept structure editing (Journey concept column). */
+.concept-rel-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.9rem 0.3rem;
+}
+.concept-rel-label {
+  color: var(--faint);
+  font-size: 0.72rem;
+}
+/* In-track concepts read louder — a bigger diamond, brighter (owner request, 2026-07-20). */
+.concept-glyph {
+  display: inline-flex;
+  color: var(--faint);
+}
+.concept-glyph.in-track {
+  color: var(--k-concept);
+}
+/* Open questions stand out in the concept-questions list. */
+.col-row.q-open .col-row-meta {
+  color: var(--raised);
+}
+.snippet-cell {
+  align-items: flex-start;
+}
+.snippet-cell-body {
+  min-width: 0;
+  overflow: hidden;
+}
+/* Image snippets render the real picture, capped so a big capture stays in-column. */
+.snippet-cell-body .md-img {
+  max-height: 220px;
+  margin-top: 0.2rem;
+}
+.concept-under {
+  color: var(--faint);
+  font-size: 0.72rem;
+}
+/* Derived reading order in the track detail (concepts-only track). */
+.derived-src {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.derived-n {
+  color: var(--faint);
+  font-size: 0.78rem;
+  min-width: 1rem;
+  text-align: right;
+}
+.derived-under {
+  color: var(--faint);
+}
+
+/* Removable concept chip (track detail): label + × in one pill. */
+.chip.removable {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding-right: 0.15rem;
+}
+.chip.removable .chip-label {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+.chip.removable .chip-x {
+  background: none;
+  border: none;
+  color: var(--faint);
+  cursor: pointer;
+  padding: 0 0.2rem;
+  line-height: 1;
+}
+.chip.removable .chip-x:hover {
+  color: var(--danger);
+}
+
+/* Question open/answered section headers + raise/answer badges. */
+.q-section {
+  font-size: 0.66rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  padding: 0.55rem 0.9rem 0.2rem;
+}
+.q-section.open {
+  color: var(--raised);
+}
+.q-section.answered {
+  color: var(--ok);
+}
+.rel-badge {
+  font-size: 0.62rem;
+  letter-spacing: 0.03em;
+  border-radius: 999px;
+  padding: 0 0.4rem;
+  margin-left: 0.35rem;
+  white-space: nowrap;
+}
+.rel-badge.raised {
+  color: var(--raised);
+  border: 1px solid color-mix(in srgb, var(--raised) 45%, transparent);
+}
+.rel-badge.answered {
+  color: var(--ok);
+  border: 1px solid color-mix(in srgb, var(--ok) 45%, transparent);
+}
+
+/* Drop slots to add a concept at root / end (Journey By-concept edit). */
+.concept-slot {
+  margin: 0.25rem 0.9rem;
+  padding: 0.5rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  color: var(--faint);
+  font-size: 0.76rem;
+  text-align: center;
+}
+.concept-slot.over {
+  border-color: var(--k-concept);
+  color: var(--k-concept);
+  background: color-mix(in srgb, var(--k-concept) 10%, transparent);
+}
+
+/* One-click include for a not-yet-included concept. */
+.path-x.x-include {
+  color: var(--k-concept);
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  border: 1px solid color-mix(in srgb, var(--k-concept) 40%, transparent);
+  border-radius: 999px;
+  padding: 0 0.4rem;
+  white-space: nowrap;
+}
+.path-x.x-include:hover {
+  background: color-mix(in srgb, var(--k-concept) 12%, transparent);
+}
+.concept-sub-tag {
+  color: var(--faint);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid var(--chip-border);
+  border-radius: 999px;
+  padding: 0 0.35rem;
+}
+
+/* Journey path-column lens pills. */
+.journey-lens {
+  /* The pills ARE the column header (owner, 2026-07-19) — inherits .col-head's inset. */
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.lens-pct {
+  color: var(--faint);
+  margin-left: 0.2rem;
+}
+
+/* Snippet compound add-row (Library): source picker + passage text. */
+.snippet-add {
+  flex: 1 1 auto;
+  display: inline-flex;
+  gap: 0.35rem;
+}
+.snippet-add .snippet-add-src {
+  flex: 0 1 200px;
+  min-width: 0;
+}
+.snippet-add input:not(.snippet-add-src) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Rail source/concept view toggle (experiment): quiet pills in the detail pane. */
+.view-toggle-row {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+.view-pill {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.06rem 0.55rem;
+}
+.view-pill:hover {
+  border-color: var(--line);
+}
+.view-pill.on {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent-soft);
+}
+/* The concept lens wears the concept colour (shape language: concepts are mint). */
+.view-pill.concepts.on {
+  background: color-mix(in srgb, var(--k-concept) 14%, transparent);
+  border-color: var(--k-concept);
+  color: var(--k-concept);
+}
+.view-pill.concepts:not(.on):hover {
+  border-color: var(--k-concept);
+  color: var(--k-concept);
+}
+.order-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.15rem 0;
+}
+.order-dir {
+  color: var(--faint);
+  font-size: 0.74rem;
+  flex: 0 0 auto;
+}
+.order-scope {
+  color: var(--faint);
+  font-size: 0.72rem;
+  font-style: italic;
+}
+.order-addrow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+.order-pick {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  font-size: 0.78rem;
+  padding: 0.22rem 0.35rem;
+}
+.order-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: 0.8rem;
+  padding: 0.22rem 0.5rem;
+}
+.order-input::placeholder {
+  color: var(--faint);
+}
+.rail-topics {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.rail-topic + .rail-topic {
+  border-top: 1px solid var(--divider);
+  padding-top: 0.55rem;
+}
+.rail-topic-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--k-concept);
+  font-size: 0.88rem;
+  padding: 0.1rem 0;
+}
+.rail-topic-head:hover {
+  color: var(--accent-soft);
+}
+.rail-topic-n {
+  color: var(--faint);
+  font-size: 0.78rem;
+  min-width: 0.8rem;
+  text-align: right;
+}
+.rail-topic-source {
+  padding: 0.16rem 0.4rem 0.16rem 1.15rem;
+  border-radius: 8px;
+}
+.rail-topic-source:hover {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 60%, transparent);
+}
+/* The current source, when this listing renders on a source's own detail. */
+.rail-topic-source.on {
+  background: var(--accent-bg);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.track-link {
+  font-size: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: var(--text);
+  padding: 0;
+}
+.rail-topic-title > svg {
+  color: var(--faint);
+  flex: 0 0 auto;
+}
+.rail-topic-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 0.84rem;
+  padding: 0;
+  text-align: left;
+}
+.rail-topic-author {
+  color: var(--faint);
+  font-size: 0.76rem;
+}
+.rail-topic-title:hover {
+  color: var(--accent-soft);
+}
+.rail-topic-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  margin-top: 0.15rem;
+}
+
+/* ── Track Outline (experiment): concept-anchored reading list ────────────── */
+.outline {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 1.2rem 1.4rem 3rem;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+.outline-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+}
+.outline-pick {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.02rem;
+  padding: 0.3rem 0.6rem;
+}
+.outline-meta {
+  color: var(--faint);
+  font-size: 0.82rem;
+}
+.outline-goal {
+  color: var(--muted);
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+}
+.outline-group {
+  margin-top: 0.9rem;
+}
+/* Break rulers between numbered groups. */
+.outline-group + .outline-group {
+  border-top: 1px solid var(--divider);
+  padding-top: 0.9rem;
+}
+.outline-concept-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.outline-n {
+  color: var(--faint);
+  font-size: 0.82rem;
+  min-width: 1rem;
+  text-align: right;
+}
+.outline-concept {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: none;
+  border: none;
+  color: var(--k-concept);
+  font-size: 0.98rem;
+  padding: 0.15rem 0.3rem;
+  border-radius: 6px;
+}
+.outline-concept:hover {
+  background: var(--surface);
+  color: var(--k-concept);
+}
+.outline-concept .chip {
+  font-size: 0.7rem;
+  color: var(--muted);
+  border: 1px solid var(--chip-border);
+  background: var(--chip-bg);
+  border-radius: 999px;
+  padding: 0.02rem 0.45rem;
+}
+.outline-empty {
+  color: var(--faint);
+  font-size: 0.8rem;
+  margin: 0.15rem 0 0 1.8rem;
+  font-style: italic;
+}
+.outline-sources {
+  list-style: none;
+  margin: 0.2rem 0 0;
+  padding: 0 0 0 1.35rem;
+}
+.outline-source {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 8px;
+  color: var(--muted);
+}
+.outline-source:hover {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 60%, transparent);
+}
+/* The source (modality) icon reads quieter than the title. */
+.outline-source-row > svg {
+  color: var(--faint);
+  flex: 0 0 auto;
+}
+.outline-source.consumed .outline-title {
+  color: var(--faint);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--faint) 55%, transparent);
+}
+.outline-title {
+  background: none;
+  border: none;
+  color: var(--text);
+  padding: 0;
+  font-size: 0.9rem;
+  text-align: left;
+}
+.outline-title:hover {
+  color: var(--accent-soft);
+}
+.outline-author {
+  color: var(--faint);
+  font-size: 0.8rem;
+}
+.outline-link {
+  display: inline-flex;
+  color: var(--faint);
+  margin-left: auto;
+}
+.outline-link:hover {
+  color: var(--accent-soft);
+}
+
+.outline-source {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.1rem;
+}
+.outline-source-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.outline-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding-left: 1.55rem;
+}
+.outline-cchip {
+  background: none;
+  border: 1px solid var(--chip-border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  padding: 0.02rem 0.5rem;
+}
+.outline-cchip:hover {
+  border-color: var(--k-concept);
+  color: var(--k-concept);
+}
+
+/* Demo banner (zero-install demo): a quiet strip above the topbar. */
+.demo-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 1.1rem;
+  background: var(--accent-bg);
+  border-bottom: 1px solid var(--accent);
+  color: var(--text);
+  font-size: 0.82rem;
+  flex: 0 0 auto;
+}
+.demo-banner a {
+  margin-left: auto;
+}
+.demo-banner .demo-reset {
+  margin-top: 0;
+  font-size: 0.8rem;
+}
+
+/* ── App shell ────────────────────────────────────────────────────────────── */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.7rem 1.1rem;
+  border-bottom: 1px solid var(--divider);
+  flex: 0 0 auto;
+}
+.brand {
+  font-size: 1.05rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.brand .brand-sub {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 0.82rem;
+  margin-left: 0.5rem;
+}
+.tabs {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 2px;
+}
+.tab {
+  background: none;
+  border: none;
+  color: var(--muted);
+  padding: 0.25rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+.tab-exp {
+  font-size: 0.6rem;
+  color: var(--faint);
+  letter-spacing: 0.04em;
+}
+.tab.active {
+  background: var(--accent-bg);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.search {
+  margin-left: auto;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 0.35rem 0.7rem;
+  color: var(--text);
+  width: 280px;
+  max-width: 34vw;
+}
+.search::placeholder {
+  color: var(--faint);
+}
+.ghost-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+.gh-link {
+  text-decoration: none;
+}
+.ghost-btn:hover {
+  border-color: var(--line-strong);
+}
+
+.workbench {
+  display: grid;
+  /* rail · resizer · centre · resizer · detail — widths driven by --rail-w / --detail-w */
+  grid-template-columns: var(--rail-w, 220px) 6px minmax(0, 1fr) 6px var(--detail-w, 380px);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.resizer {
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  z-index: 3;
+  touch-action: none;
+}
+.resizer::after {
+  content: '';
+  position: absolute;
+  inset: 0 2px;
+  background: var(--divider);
+  transition: background 0.12s;
+}
+.resizer:hover::after,
+.resizer:active::after {
+  background: var(--accent);
+}
+@media (max-width: 900px) {
+  .workbench {
+    grid-template-columns: 1fr;
+  }
+  .rail,
+  .detail,
+  .resizer {
+    display: none;
+  }
+}
+.pane {
+  min-height: 0;
+  overflow-y: auto;
+}
+.rail {
+  padding: 1rem 0.9rem;
+}
+.detail {
+  padding: 1.1rem 1.2rem;
+}
+
+.error {
+  color: var(--danger);
+  padding: 0.75rem 1.1rem;
+}
+.error.inline {
+  padding: 0;
+  font-size: 0.82rem;
+}
+.hint {
+  color: var(--muted);
+  padding: 0.6rem 0;
+}
+.rail-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 1rem 0 0.4rem;
+}
+.rail-label:first-child {
+  margin-top: 0;
+}
+
+/* ── Browse rail ──────────────────────────────────────────────────────────── */
+.browse-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text);
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+.browse-row:hover {
+  background: var(--surface);
+}
+.browse-row.on {
+  background: var(--accent-bg);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.browse-count {
+  color: var(--faint);
+  font-size: 0.8rem;
+}
+/* Read-state filter (all / unread / read): a quiet pill row where Backlog used to live. */
+.read-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.5rem;
+  color: var(--faint);
+}
+.read-pill {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  padding: 0.08rem 0.55rem;
+}
+.read-pill:hover {
+  border-color: var(--line);
+}
+.read-pill.on {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent-soft);
+}
+
+/* Kind sub-facets (source types, open/answered questions): indented quiet rows. */
+.browse-sub {
+  margin: 1px 0 3px;
+  padding-left: 1.1rem;
+}
+.browse-row.sub {
+  padding: 0.18rem 0.5rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.browse-row.sub .browse-glyph {
+  color: var(--faint);
+  font-size: 0.78rem;
+  width: 15px;
+  justify-content: center;
+}
+.browse-row.sub.on {
+  color: var(--text);
+}
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.chip {
+  border: 1px solid var(--chip-border);
+  background: var(--chip-bg);
+  border-radius: 999px;
+  padding: 0.08rem 0.5rem;
+  font-size: 0.76rem;
+  color: var(--text);
+  white-space: nowrap;
+}
+button.chip {
+  cursor: pointer;
+}
+button.chip.on {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--accent-soft);
+}
+.chip.concept {
+  border-color: color-mix(in srgb, var(--k-concept) 45%, var(--chip-border));
+  color: var(--k-concept);
+}
+.chip.concept.on {
+  background: color-mix(in srgb, var(--k-concept) 18%, transparent);
+  border-color: var(--k-concept);
+}
+/* Tags carrying a remove-× align their contents on the centre line. */
+.detail-tags .chip {
+  display: inline-flex;
+  align-items: center;
+}
+/* The remove-× sits inside the pill: tiny, muted, no border of its own. */
+button.chip-x {
+  all: unset;
+  cursor: pointer;
+  margin: 0 -0.15rem 0 0.3rem;
+  padding: 0 0.15rem;
+  color: var(--faint);
+  font-size: 0.95em;
+  line-height: 1;
+  border-radius: 999px;
+}
+button.chip-x:hover {
+  color: var(--danger);
+}
+.chip.tag-add {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+/* ── Unified item list ────────────────────────────────────────────────────── */
+.list-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--divider);
+  color: var(--muted);
+  font-size: 0.82rem;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 1;
+}
+.item {
+  display: grid;
+  grid-template-columns: 28px 1fr 16px;
+  gap: 0.7rem;
+  align-items: center; /* the kind tile centers on the whole row (owner request, 2026-07-18) */
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--divider);
+  border-left: 2px solid transparent;
+  color: var(--text);
+  padding: 0.75rem 1rem;
+}
+.item:hover {
+  background: var(--surface-2);
+}
+.item.on {
+  background: var(--surface);
+  border-left-color: var(--accent);
+}
+.item-glyph {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.item-glyph svg {
+  width: 15px;
+  height: 15px;
+}
+.item-kind {
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.item-title {
+  font-size: 0.92rem;
+  font-weight: 500;
+  margin: 0.05rem 0 0.15rem;
+  line-height: 1.35;
+}
+.item-meta {
+  color: var(--muted);
+  font-size: 0.8rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+.item-chev {
+  color: var(--faint);
+  align-self: center;
+}
+.dot {
+  color: var(--faint);
+}
+
+/* ── Detail pane ──────────────────────────────────────────────────────────── */
+/* The kind badge (owner mock, 2026-07-18): the item's icon in a soft rounded tile, tinted
+   by kind, with the kind name as a quiet uppercase label beside it. */
+.kind-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  line-height: 0; /* svg baseline slack would nudge the glyph off-center */
+}
+.kind-label {
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-size: 0.72rem;
+  color: var(--faint);
+}
+.detail-top {
+  display: flex;
+  justify-content: space-between;
+  /* center, not baseline: the 32px kind tile made baseline alignment sit the text low. */
+  align-items: center;
+  color: var(--faint);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  gap: 10px;
+}
+.detail h2 {
+  font-size: 1.2rem;
+  line-height: 1.3;
+  margin: 0.3rem 0 0.5rem;
+}
+.detail-url {
+  display: inline-flex;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  word-break: break-all;
+  margin-bottom: 0.6rem;
+}
+.detail-section {
+  font-size: 0.7rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 1.1rem 0 0.5rem;
+}
+.detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  margin: 0.25rem 0 0.9rem; /* breathing room before the Note field below */
+}
+/* Tags/chips wrap to new lines and never clip; a chip stays intact on its own line. */
+.detail-tags .chip,
+.item-meta .chip {
+  white-space: nowrap;
+  overflow: visible;
+  max-width: 100%;
+}
+.snippet-box {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 0.6rem 0.7rem;
+  margin-bottom: 0.5rem;
+  background: var(--surface-2);
+}
+.snippet-box .sentiment {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0 0 0.3rem;
+}
+.snippet-box blockquote {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+.snippet-box .snippet-note {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin: 0.3rem 0 0;
+}
+
+/* ── Connections ──────────────────────────────────────────────────────────── */
+.connections {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.connection {
+  display: grid;
+  grid-template-columns: 96px 18px 1fr;
+  gap: 0.5rem;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text);
+  padding: 0.3rem 0.35rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+.connection:hover {
+  background: var(--surface-2);
+}
+.connection-type {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.connection-target {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.connection svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+/* ── Track reading path (feedback round 3) ─────────────────────────────── */
+.track-path-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-weight: 500;
+  padding: 0.1rem 0;
+  width: 100%;
+  text-align: left;
+}
+.track-path-head svg {
+  width: 15px;
+  height: 15px;
+}
+.track-path {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0 0 0 0.5rem;
+  border-left: 1px solid var(--divider);
+}
+.path-source {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--muted);
+  padding: 0.28rem 0.4rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+.path-source:hover {
+  background: var(--surface-2);
+}
+.path-source.current {
+  background: var(--accent-bg);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+/* Track member titles WRAP (owner ruling, 2026-07-18): near-identical titles differ only in
+   their tails, so clipping hides exactly the distinguishing part. Number stays on line 1. */
+.track-path .connection-target {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+.track-path .path-source {
+  align-items: flex-start;
+}
+.track-path .path-num {
+  line-height: 1.55; /* optically centers the numeral on the title's first line */
+}
+.path-texts {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+.path-author {
+  font-size: 0.72rem;
+  color: var(--faint);
+}
+.fact-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 12.5px;
+  color: var(--text);
+  min-width: 0;
+}
+/* The TEXT ellipsizes; the pencil sits OUTSIDE the overflow so a 100-author list can't
+   clip it away (owner bug, 2026-07-18). */
+.fact-value-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.fact-value .title-pencil {
+  flex: none;
+  opacity: 1; /* the base pencil hides until .title-row:hover — no such parent here, so it
+                 was permanently invisible (owner bug, 2026-07-18) */
+}
+.kind-badge-btn {
+  cursor: pointer;
+  padding: 0;
+}
+.kind-badge-btn:hover {
+  border-color: var(--accent);
+}
+.fact-empty {
+  color: var(--faint);
+}
+.path-num {
+  color: var(--faint);
+  font-size: 0.78rem;
+  width: 1.6em;
+  flex: none;
+  text-align: right;
+  /* tabular digits: every numeral the same width, so 1–99 all align (Inter's default
+     proportional digits made the narrow '1' float right of its column). */
+  font-variant-numeric: tabular-nums;
+}
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--accent-soft);
+  padding: 0;
+  font-size: 0.85rem;
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  margin-top: 0.9rem;
+}
+.detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+.detail-field input,
+.detail-field select,
+.detail-field textarea {
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+}
+.detail-field textarea {
+  resize: vertical;
+  min-height: 3.2em;
+  line-height: 1.4;
+  white-space: pre-wrap; /* the note wraps inside the box instead of scrolling on one line */
+  overflow-wrap: anywhere;
+}
+/* Displayed note text (source detail's snippet list) wraps too. */
+.snippet-note {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.detail-field input:disabled {
+  opacity: 0.5;
+}
+.detail-actions {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  margin-top: 0.8rem;
+}
+/* Nocturne: primary actions are an accent OUTLINE on transparent, never a flood. */
+.action {
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: var(--accent-soft);
+  font-weight: 500;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.85rem;
+}
+.action:hover {
+  background: var(--accent-bg);
+}
+.action.subtle {
+  border-color: var(--line);
+  color: var(--text);
+  font-weight: 400;
+}
+.action:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.remove {
+  background: none;
+  border: none;
+  color: var(--faint);
+  padding: 0 0.25rem;
+}
+.remove:hover {
+  color: var(--danger);
+}
+/* Icon + label inline (sentiment display) */
+.sentiment-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.sentiment-tag svg,
+.connection svg,
+.item-glyph svg,
+.track-path-head svg,
+.detail-url svg {
+  flex: none;
+}
+
+/* Custom dropdown (sentiment picker) */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+.dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 0.3rem 0.55rem;
+  font-size: 0.9rem;
+  min-width: 150px;
+  justify-content: space-between;
+}
+.dropdown-trigger:hover {
+  border-color: var(--line-strong);
+}
+.dropdown-placeholder {
+  color: var(--faint);
+}
+.dropdown-menu {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 100%;
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+.dropdown-opt {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text);
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+.dropdown-opt:hover {
+  background: var(--surface-2);
+}
+.dropdown-opt.on {
+  color: var(--accent-soft);
+  background: var(--accent-bg);
+}
+.dropdown-opt.clear {
+  color: var(--faint);
+  border-top: 1px solid var(--divider);
+  border-radius: 0;
+  margin-top: 0.15rem;
+}
+
+/* ── Toast ────────────────────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 1.2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 0.55rem 1rem;
+  display: flex;
+  gap: 0.9rem;
+  align-items: center;
+  z-index: 20;
+  font-size: 0.88rem;
+}
+.link {
+  background: none;
+  border: none;
+  color: var(--accent-soft);
+  padding: 0;
+}
+
+/* ── Journey: the column browser (wireframe 1c) ───────────────────────────── */
+.journey {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.journey-head {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.7rem 1.1rem;
+  border-bottom: 1px solid var(--divider);
+  flex: 0 0 auto;
+}
+.journey-head h2 {
+  font-size: 1rem;
+}
+.breadcrumb {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.crumb.current {
+  color: var(--accent-soft);
+}
+.crumb-sep {
+  color: var(--faint);
+}
+.journey-cols {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.journey-col {
+  border-right: 1px solid var(--divider);
+  overflow-y: auto;
+  padding: 0.5rem 0;
+  min-width: 0;
+}
+.journey-col:last-child {
+  border-right: none;
+}
+.journey-col .hint {
+  padding: 0.6rem 0.9rem;
+}
+.col-head {
+  font-size: 0.68rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding: 0.5rem 0.9rem 0.35rem;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+}
+.col-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-left: 2px solid transparent;
+  color: var(--text);
+  padding: 0.5rem 0.9rem;
+}
+.col-row:hover {
+  background: var(--surface-2);
+}
+.col-row.on {
+  background: var(--surface);
+  border-left-color: var(--accent);
+}
+/* Cross-highlight: a snippet/question's relation to the focused item. */
+.col-row.rel-raised {
+  border-left-color: var(--raised);
+  background: color-mix(in srgb, var(--raised) 12%, transparent);
+}
+.col-row.rel-answered {
+  border-left-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+}
+.col-row-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+.col-row-title svg {
+  flex: none;
+}
+.col-row-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin-top: 0.2rem;
+  padding-left: 1.2rem;
+}
+.col-row-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+  padding-left: 1.2rem;
+}
+.detail-col {
+  padding: 0.5rem 0.2rem;
+}
+.leaf-quote {
+  margin: 0.4rem 0.9rem;
+  font-style: italic;
+  line-height: 1.45;
+}
+.leaf-question {
+  margin: 0.4rem 0.9rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.leaf-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0.3rem 0.9rem;
+}
+.detail-col .sentiment,
+.detail-col .snippet-note {
+  margin: 0.3rem 0.9rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.leaf-link {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text);
+  padding: 0.35rem 0.9rem;
+  font-size: 0.88rem;
+}
+.leaf-link:hover {
+  background: var(--surface-2);
+  color: var(--accent-soft);
+}
+.leaf-link svg {
+  flex: none;
+}
+.leaf-open {
+  display: block;
+  background: none;
+  border: none;
+  color: var(--accent-soft);
+  padding: 0.6rem 0.9rem;
+  font-size: 0.85rem;
+}
+
+/* Journey: legend, source/snippet badges, and the grey add box */
+.edit-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--muted);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.82rem;
+}
+.edit-toggle.on {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--accent-soft);
+}
+.tracked-concepts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.tracked-concepts .chip.concept.on {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+.tracked-concepts .chip:disabled {
+  cursor: default;
+}
+.chip.seminal {
+  color: var(--raised);
+  border-color: color-mix(in srgb, var(--raised) 50%, var(--chip-border));
+  background: color-mix(in srgb, var(--raised) 12%, var(--chip-bg));
+}
+.consume-check {
+  display: inline-flex;
+  color: var(--faint);
+  cursor: pointer;
+}
+.consume-check:hover {
+  color: var(--ok);
+}
+.row-title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.open-questions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  color: var(--raised);
+  margin-left: auto;
+  font-size: 0.78rem;
+}
+/* Consumed-progress bar on a track row. */
+.track-progress {
+  display: block;
+  height: 3px;
+  margin: 0.35rem 0 0 1.2rem;
+  border-radius: 2px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.track-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--ok);
+  transition: width 0.25s ease;
+}
+/* ── Graph view (hierarchical journey tree, from the Learning Library design) ─────────── */
+.graph-view {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+/* "experimental" badge — this graph view is a work in progress (owner, 2026-07-21). */
+.gv-experimental {
+  position: sticky;
+  top: 10px;
+  left: 12px;
+  z-index: 3;
+  float: left;
+  margin: 10px 0 0 12px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--k-snippet);
+  background: color-mix(in srgb, var(--k-snippet) 14%, var(--bg));
+  border: 1px solid color-mix(in srgb, var(--k-snippet) 40%, transparent);
+  pointer-events: none;
+}
+.graph-canvas {
+  position: relative;
+  margin: 0 auto;
+}
+.graph-svg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.graph-svg text {
+  font-family: inherit;
+}
+.gv {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  z-index: 1;
+}
+.gv.dim {
+  opacity: 0.2;
+}
+.gv-texts {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.gv .gv-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gv .gv-meta {
+  font-size: 10px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+/* Track box on the spine. */
+.gv-sylbox {
+  gap: 11px;
+  padding: 0 16px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+}
+.gv-sylbox.sel {
+  border-color: var(--accent);
+}
+.gv-sylbox .gv-title {
+  font-size: 13.5px;
+  /* Track titles wrap to fit the whole name instead of truncating (owner req 2026-07-21). */
+  white-space: normal;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.25;
+}
+.gv-sylbox .gv-meta {
+  font-size: 10.5px;
+  /* Keep the meta inside the box — one line, ellipsis, never spilling past the edge. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+}
+.gv-icon {
+  display: flex;
+  flex: none;
+}
+/* The port dot on the box's left edge. */
+.gv-port {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1.5px solid color-mix(in srgb, var(--accent) 55%, var(--bg));
+  z-index: 2;
+}
+.gv-port.sel {
+  border-color: var(--accent);
+}
+/* Concept row (concept-anchored tracks): diamond glyph + name, indented by prerequisite depth.
+   Included ("main") concepts read stronger; family sub-concepts are lighter. */
+.gv-conceptrow {
+  gap: 8px;
+  transform: translateY(-50%);
+}
+.gv-conceptrow .gv-shape {
+  flex: none;
+  display: flex;
+  align-items: center;
+  color: var(--k-concept);
+}
+.gv-conceptrow .gv-title {
+  font-size: 12px;
+  color: var(--muted);
+  max-width: 300px;
+}
+.gv-conceptrow.main .gv-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+.gv-conceptrow.sel .gv-title {
+  color: var(--accent-soft);
+}
+/* Source row: circled modality icon + title + meta. */
+.gv-source {
+  gap: 10px;
+  transform: translateY(-50%);
+}
+.gv-source .gv-shape {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  /* Kind colors (bug fix, 2026-07-18): the graph now speaks the same --k-* palette as the
+     rail glyphs, list, and Map — it predated the kind-color system. */
+  border: 1px solid color-mix(in srgb, var(--k-source) 55%, var(--line-strong));
+  color: var(--k-source);
+}
+.gv-source.sel .gv-shape {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.gv-source .gv-title {
+  font-size: 12.5px;
+  max-width: 400px;
+}
+/* Concept chips anchored to a source (source-anchored tracks) — the concepts it's ABOUT. */
+.gv-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 3px;
+  max-width: 420px;
+}
+.gv-chip {
+  font-size: 10px;
+  line-height: 1.4;
+  padding: 0 6px;
+  border-radius: 999px;
+  color: var(--k-concept);
+  background: color-mix(in srgb, var(--k-concept) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--k-concept) 35%, transparent);
+  white-space: nowrap;
+}
+.gv-source.sel .gv-chip {
+  color: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.gv-source.sel .gv-title {
+  color: var(--accent-soft);
+}
+/* Snippet row: small accent dot + italic quote. */
+.gv-snippet {
+  gap: 10px;
+  transform: translateY(-50%);
+}
+.gv-snippet .gv-shape {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+  background: color-mix(in srgb, var(--k-snippet) 70%, var(--bg));
+}
+.gv-snippet.sel .gv-shape {
+  background: var(--accent);
+}
+.gv-snippet .gv-title {
+  font-size: 11.5px;
+  font-style: italic;
+  max-width: 330px;
+  color: var(--muted);
+}
+.gv-snippet.sel .gv-title {
+  color: var(--accent-soft);
+}
+/* Question on the right rail: diamond + text. */
+.gv-question {
+  gap: 12px;
+  transform: translateY(-50%);
+}
+.gv-question .gv-shape {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%; /* questions are CIRCLES everywhere (owner consistency ruling) */
+  flex: none;
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--k-question) 60%, var(--line-strong));
+}
+.gv-question.sel .gv-shape {
+  border-color: var(--accent);
+}
+.gv-question .gv-title {
+  font-size: 12px;
+  line-height: 1.3;
+  max-width: 280px;
+  white-space: normal;
+  color: var(--muted);
+  /* Clamp to two lines so rows keep a fixed height and don't overlap (owner req 2026-07-21). */
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.gv-question.sel .gv-title {
+  color: var(--accent-soft);
+}
+.gv-section {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+  cursor: default;
+}
+.gv-legend {
+  position: absolute;
+  left: 16px;
+  bottom: 10px;
+  font-size: 11px;
+  color: var(--faint);
+}
+
+/* Zone-based drop targeting on source rows (edit mode): the whole row is the surface —
+   top third shows an insertion line above (place before), bottom third below (place after),
+   the middle outlines the row (co-requisite). */
+.col-row.drop-above {
+  box-shadow: inset 0 3px 0 var(--accent);
+}
+.col-row.drop-below {
+  box-shadow: inset 0 -3px 0 var(--accent);
+}
+.col-row.drop-coreq {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.drop-hint {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--accent-soft);
+}
+/* Drop target for an empty track. */
+.drop-empty {
+  margin: 0.3rem 0.9rem;
+  padding: 0.8rem;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-md);
+  color: var(--faint);
+  font-size: 0.8rem;
+  text-align: center;
+}
+.drop-empty.over {
+  border-color: var(--accent);
+  color: var(--accent-soft);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* Inline rename in the detail pane (sources). */
+.title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+.title-pencil {
+  background: none;
+  border: none;
+  padding: 2px;
+  color: var(--faint);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.title-row:hover .title-pencil {
+  opacity: 1;
+}
+.title-pencil:hover {
+  color: var(--accent);
+}
+.title-edit {
+  font-size: 1.25rem;
+  font-weight: 500;
+  background: var(--surface-2);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 0.15rem 0.4rem;
+  width: 100%;
+}
+
+/* Inline rename inside journey column rows (edit mode). */
+.row-pencil {
+  display: inline-flex;
+  flex: none;
+  color: var(--faint);
+  cursor: pointer;
+  padding: 1px;
+}
+.row-pencil:hover {
+  color: var(--accent);
+}
+.row-edit {
+  width: 100%;
+  font: inherit;
+  font-size: 0.9rem;
+  background: var(--surface-2);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 0.2rem 0.45rem;
+}
+
+.drag-palette {
+  margin-top: 0.6rem;
+  border-top: 1px solid var(--divider);
+}
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.25rem 0.7rem;
+  padding: 0.3rem 0.5rem;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  cursor: grab;
+}
+.palette-item:active {
+  cursor: grabbing;
+}
+.journey-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.rel-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+  margin-left: 0.6rem;
+}
+.rel-swatch.raised {
+  background: var(--raised);
+}
+.rel-swatch.answered {
+  background: var(--ok);
+}
+.src-badge {
+  font-size: 0.68rem;
+  padding: 0.02rem 0.35rem;
+  border-radius: 4px;
+  border: 1px solid var(--chip-border);
+}
+.src-badge.source {
+  color: var(--k-source);
+  border-color: color-mix(in srgb, var(--k-source) 45%, var(--chip-border));
+}
+.src-badge.snippet {
+  color: var(--k-snippet);
+  border-color: color-mix(in srgb, var(--k-snippet) 45%, var(--chip-border));
+}
+.add-box {
+  display: block;
+  width: calc(100% - 1.4rem);
+  margin: 0.5rem 0.7rem;
+  padding: 0.5rem 0.7rem;
+  background: var(--surface-2);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  text-align: left;
+  font-size: 0.85rem;
+}
+.add-box:hover {
+  border-color: var(--accent);
+  color: var(--accent-soft);
+}
+.add-box.open {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  cursor: default;
+}
+.add-box.open input,
+.add-box.open textarea {
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.3rem 0.45rem;
+  resize: vertical;
+}
+.add-actions {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+}
+
+/* ── Map ──────────────────────────────────────────────────────────────────── */
+.map {
+  position: relative;
+  overflow: hidden;
+}
+.map svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.map-legend {
+  position: absolute;
+  top: 0.7rem;
+  left: 0.9rem;
+  display: flex;
+  gap: 0.9rem;
+  font-size: 0.76rem;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--divider);
+}
+.map-legend .swatch {
+  margin-right: 0.3rem;
+}
+.map-hint {
+  position: absolute;
+  bottom: 0.7rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.76rem;
+  color: var(--faint);
+}
+.map-zoom {
+  position: absolute;
+  bottom: 0.7rem;
+  right: 0.9rem;
+  display: flex;
+  gap: 0.3rem;
+}
+.map-zoom button {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  width: 26px;
+  height: 26px;
+}
+.node-label {
+  font-size: 10px;
+  fill: var(--muted);
+  pointer-events: none;
+}
+.node-label.selected {
+  fill: var(--text);
+}
+.edge-label {
+  font-size: 10px;
+  fill: var(--text);
+  pointer-events: none;
+  paint-order: stroke; /* dark outline so the label stays legible over edges */
+  stroke: var(--bg);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+/* Chromeless embed mode (#…&embed): the single view fills the iframe. */
+.app.embed .pane.map {
+  flex: 1;
+  min-width: 0;
+  border: none;
+}
+
+/* ── The publication page (/t/<id>) — a document, not the workbench ─────────────────────── */
+.pub {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  overflow-y: auto;
+}
+.pub-doc {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+.pub-missing {
+  color: var(--muted);
+  text-align: center;
+  padding-top: 15vh;
+}
+.pub-kicker {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-soft);
+  margin-bottom: 10px;
+}
+.pub-head h1 {
+  margin: 0 0 10px;
+  font-size: 32px;
+  line-height: 1.2;
+}
+.pub-goal {
+  color: var(--muted);
+  font-size: 16px;
+  margin: 0 0 14px;
+}
+.pub-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  color: var(--faint);
+  font-size: 13px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--divider);
+}
+.pub-license {
+  color: var(--accent-soft);
+}
+.pub section {
+  margin-top: 36px;
+}
+.pub h2 {
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 14px;
+}
+.pub-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pub-chip {
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-border);
+  color: var(--k-concept);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 13px;
+}
+.pub-level {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.pub-level-n {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent-bg);
+  color: var(--accent-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 14px;
+}
+.pub-level-sources {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pub-source {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+}
+.pub-source h3 {
+  margin: 0 0 6px;
+  font-size: 17px;
+}
+.pub-source h3 a {
+  color: var(--text);
+  text-decoration: none;
+}
+.pub-source h3 a:hover {
+  color: var(--accent-soft);
+}
+.pub-src-meta {
+  color: var(--faint);
+  font-size: 13px;
+}
+.pub-snippet {
+  margin: 14px 0 0;
+  padding: 10px 16px;
+  border-left: 3px solid var(--k-snippet);
+  background: var(--surface-2);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+.pub-snippet p {
+  margin: 0;
+  font-style: italic;
+  color: var(--text);
+}
+.pub-tie {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  margin-top: 8px;
+  color: var(--muted);
+}
+.pub-tie-badge {
+  flex: none;
+  border-radius: 999px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+.pub-tie-raises .pub-tie-badge {
+  color: var(--k-question);
+  background: color-mix(in srgb, var(--k-question) 14%, transparent);
+}
+.pub-tie-answers .pub-tie-badge {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+}
+.pub-questions {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--text);
+}
+.pub-questions li {
+  margin-bottom: 6px;
+}
+.pub-foot {
+  margin-top: 48px;
+  padding-top: 16px;
+  border-top: 1px solid var(--divider);
+  color: var(--faint);
+  font-size: 13px;
+}
+.pub-foot a {
+  color: var(--accent-soft);
+}
+.pub-foot code {
+  background: var(--chip-bg);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.pub-signed {
+  color: var(--ok);
+}
+
+/* Publishing section on the track detail (publish plan P2, workbench affordance). */
+.publish-box {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.publish-state {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.publish-live {
+  color: var(--ok);
+}
+.publish-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.publish-stop {
+  color: var(--danger);
+}
+.publish-go {
+  color: var(--ok);
+}
+.publish-terms {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.publish-license {
+  width: 150px;
+  font-size: 12.5px;
+}
+
+/* A standing-excluded tag chip (off → include → exclude → off; exclusion persists). */
+.chip.excluded {
+  opacity: 0.55;
+  text-decoration: line-through;
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+}
+
+/* Inline concept creation in the list head (shown while browsing Concepts). */
+.list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.list-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.list-add input {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12.5px;
+  padding: 3px 8px;
+  width: 150px;
+}
+.list-add input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Kind glyphs in the Browse rail rows. */
+.browse-glyph {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 8px;
+  color: var(--muted);
+}
+.browse-row > span:nth-child(2) {
+  flex: 1;
+  text-align: left;
+}
+
+/* The concept-anchor editor on source/snippet details. */
+.anchor-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+/* .link-btn's blanket 0.9rem top margin (detail-pane action rows) breaks the flex centering
+   of + Add / + Link next to their inputs — inside these rows the row aligns, not the margin. */
+.anchor-add .link-btn,
+.list-add .link-btn {
+  margin-top: 0;
+}
+.anchor-add select,
+.anchor-add input {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12.5px;
+  padding: 3px 8px;
+}
+.anchor-add input {
+  flex: 1;
+  min-width: 0;
+}
+.anchor-add input:focus,
+.anchor-add select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* The remove-× on relation chips (span inside the chip button; button.chip-x is the tag form). */
+.chip .chip-x {
+  margin-left: 6px;
+  opacity: 0.5;
+  cursor: pointer;
+}
+.chip .chip-x:hover {
+  opacity: 1;
+  color: var(--danger);
+}
+
+/* The snippet-markdown contract's math tokens — GitHub-style (owner feedback, 2026-07-18):
+   math is TYPOGRAPHY, not a box. A math-capable serif stack, no backgrounds, display blocks
+   centered with breathing room. (KaTeX typesetting remains the documented opt-in.) */
+.md-math {
+  font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', 'Georgia', serif;
+  font-style: italic;
+  font-size: 1.06em;
+  padding: 0 1px;
+}
+/* KaTeX-typeset math (the real renderer; .md-math styles below are the fallback path). */
+.md-katex .katex {
+  font-size: 1.06em;
+}
+.md-katex-display {
+  display: block;
+  text-align: center;
+  margin: 8px 0;
+  overflow-x: auto;
+}
+.md-katex-display .katex-display {
+  margin: 0; /* our rhythm, not KaTeX's 1em default */
+}
+.md-katex-display .katex {
+  font-size: 1.12em;
+}
+.md-math-block {
+  font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', 'Georgia', serif;
+  font-style: italic;
+  font-size: 1.18em;
+  text-align: center;
+  padding: 0;
+  margin: 8px 0;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+.md-p {
+  margin: 0 0 6px;
+}
+.md-p:last-child {
+  margin-bottom: 0;
+}
+.md-list {
+  margin: 0 0 6px;
+  padding-left: 18px;
+}
+
+/* Display math encountered mid-paragraph (single-newline captures) — same centered block
+   presentation, without invalid div-in-p nesting. */
+.md-math.md-math-display {
+  display: block;
+  font-size: 1.18em;
+  text-align: center;
+  padding: 0;
+  margin: 8px 0;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
+/* ![alt](url) images (image-capture adapter): inline media sized to its container; a
+   paragraph that IS an image renders as a centered figure; one-line rows and public pages
+   get chip/link stand-ins instead of media. */
+.md-img {
+  max-width: 100%;
+  max-height: 420px;
+  border-radius: var(--radius-sm);
+  vertical-align: middle;
+}
+.md-img-block {
+  text-align: center;
+  margin: 8px 0;
+}
+.md-img-mini {
+  height: 1.45em;
+  max-width: 4.5em;
+  object-fit: contain;
+  vertical-align: -0.4em;
+  border-radius: 3px;
+}
+/* Clickable images: pointer + fullscreen fills the screen letterboxed. */
+.md-img-zoom {
+  cursor: zoom-in;
+}
+.md-img-zoom:fullscreen {
+  cursor: zoom-out;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+  background: #000;
+}
+.md-img-link {
+  color: var(--accent-soft);
+  text-decoration: none;
+}
+.md-img-link:hover {
+  text-decoration: underline;
+}
+
+/* Track member rows: the remove-× appears on hover, quiet otherwise. */
+.path-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.path-row .path-source {
+  flex: 1;
+  min-width: 0;
+}
+.path-x {
+  background: none;
+  border: none;
+  color: var(--faint);
+  font-size: 1em;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 999px;
+  opacity: 0;
+}
+.path-row:hover .path-x {
+  opacity: 1;
+}
+.path-move {
+  display: inline-flex;
+  flex: none;
+}
+.path-x:disabled {
+  opacity: 0 !important;
+  cursor: default;
+}
+.path-x:hover {
+  color: var(--danger);
+}
+
+/* Sentiment as a mutually-exclusive button row (owner request, 2026-07-18): icon + word
+   pills, one active; clicking the active one clears. */
+.sent-seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.sent-seg button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  padding: 0.18rem 0.65rem;
+}
+.sent-seg button:hover {
+  border-color: var(--line-strong);
+}
+.sent-seg button.on {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent-soft);
+}
+
+/* Source facts (author + type) on the source detail — quiet label/value rows. */
+.source-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0 8px;
+}
+.fact-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fact-label {
+  color: var(--faint);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  width: 34px;
+  flex: none;
+}
+.fact-row input,
+.fact-row select {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12.5px;
+  padding: 3px 8px;
+  min-width: 0;
+}
+.fact-row input {
+  flex: 1;
+}
+.fact-row input:focus,
+.fact-row select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Read toggle in the detail-top (owner request, 2026-07-18): quiet pill, green when read. */
+.read-toggle {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  padding: 1px 9px;
+  white-space: nowrap;
+  /* buttons don't inherit the header's casing — match it explicitly */
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.read-toggle:hover {
+  border-color: var(--line-strong);
+}
+.read-toggle.on {
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 45%, var(--line));
+}
+.modality-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pub-track-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--k-track);
+  margin-right: 0.5rem;
+  vertical-align: middle;
+  line-height: 0;
+}
+.pub-src-icon {
+  color: var(--k-source);
+  margin-right: 0.4rem;
+  vertical-align: -2px;
+  line-height: 0;
+  display: inline-flex;
+}
+/* Aligned with the reading-order source cards: the level number column (28px) + its gap. */
+.pub-map-wrap {
+  position: relative;
+  margin-left: 44px;
+}
+.pub-map {
+  width: 100%;
+  max-height: 320px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+/* Fullscreen map: the wrapper fills the screen, the SVG takes all of it. */
+.pub-map-wrap:fullscreen {
+  margin: 0;
+  background: var(--bg);
+  display: flex;
+}
+.pub-map-wrap:fullscreen .pub-map {
+  max-height: none;
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 0;
+}
+.pub-map-zoom {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+}
+.pub-map-zoom button {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+}
+.pub-map-zoom button:hover {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+.pub-map-edge {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+  opacity: 0.7;
+}
+.pub-map-edge.prereq {
+  stroke: var(--accent);
+  stroke-dasharray: 4 3;
+}
+.pub-map-node.track { fill: var(--k-track); }
+.pub-map-node.concept { fill: var(--k-concept); }
+.pub-map-node.source { fill: var(--k-source); }
+.pub-map-node.question { fill: var(--k-question); }
+.pub-src-concepts.foot {
+  margin-top: 0.6rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--divider);
+}
+.pub-h2-icon {
+  vertical-align: -2px;
+  margin-right: 0.3rem;
+  color: var(--k-track);
+}
+.pub-map-label {
+  fill: var(--muted);
+  font-size: 9.5px;
+  text-anchor: middle;
+}
+
+.pub-fork {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent-soft);
+  font-size: 0.85rem;
+  padding: 0.25rem 0.9rem;
+  margin-right: 0.8rem;
+}
+.pub-fork:hover {
+  background: color-mix(in srgb, var(--accent) 28%, var(--bg));
+}
+.pub-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.registry-row {
+  margin-top: 4px;
+}
+.registry-url {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+}
+
+/* The raw-source toggle on snippet details (view + copy; text is identity, never edited here). */
+.raw-toggle {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  padding: 2px 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+.raw-toggle:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+.raw-toggle.on {
+  color: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: var(--accent-bg);
+}
+.raw-md {
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin: 0 0 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+}
+
+/* The raw view is an editor now (edit-by-supersession on save). */
+textarea.raw-edit {
+  width: 100%;
+  resize: vertical;
+}
+textarea.raw-edit:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Snippet detail: the passage as readable prose, not a heading (bigger than body, not thick). */
+.snippet-display {
+  font-size: 1.06rem;
+  line-height: 1.7;
+  font-weight: 400;
+  color: var(--text);
+  margin: 2px 0 10px;
+}
+.snippet-display .md-p {
+  margin: 0 0 10px;
+}
+
+/* Create-in-detail buttons (Library list head): one boxed '+ <icon> <kind>' per creatable
+   kind. Font and colour match a browse-view item row; a literal box wraps each. */
+.list-new {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+.new-draft {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+  text-transform: capitalize;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.2rem 0.5rem;
+}
+.new-draft:hover {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+.new-draft .new-draft-plus {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 1rem;
+  line-height: 1;
+}
+.new-draft svg {
+  color: var(--muted);
+}
+
+/* Draft form (create-in-detail for identity-named concept/question/snippet). */
+.draft-form .draft-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  margin-bottom: 1rem;
+}
+.draft-form .draft-icon {
+  display: inline-flex;
+}

@@ -1,0 +1,102 @@
+<!doctype html>
+<!-- Region-capture crop page (PDF math tier 2, owner feedback 2026-07-18: cropping inside the
+     600px popup meant cropping a postage stamp). The popup screenshots the tab, stashes it in
+     session storage, and opens THIS page in a full tab — the screenshot renders at its true
+     on-screen size, the crop joins the originating page's draft, and you land back on the PDF
+     with the snippet waiting in the popup. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Philomatic — crop the capture</title>
+    <style>
+      :root {
+        --bg: #161826;
+        --surface-2: #1c1e2b;
+        --text: #e9e9ed;
+        --muted: #9397ab;
+        --accent: #9184d9;
+        --line: #3f424d;
+        --radius: 6px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 14px/1.5 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+        display: flex;
+        flex-direction: column;
+      }
+      #stage {
+        position: relative;
+        flex: 1 1 auto;
+        overflow: auto;
+        cursor: crosshair;
+      }
+      #shot {
+        display: block;
+        user-select: none;
+        -webkit-user-drag: none;
+      }
+      #rect {
+        position: absolute;
+        border: 1.5px dashed var(--accent);
+        background: color-mix(in srgb, var(--accent) 14%, transparent);
+        pointer-events: none;
+      }
+      .bar {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.55rem 0.9rem;
+        border-top: 1px solid var(--line);
+        background: var(--surface-2);
+      }
+      .bar .hint {
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+      .spacer {
+        flex: 1;
+      }
+      button {
+        font: inherit;
+        color: var(--text);
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 0.35rem 0.9rem;
+        cursor: pointer;
+      }
+      button.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #14121f;
+        font-weight: 500;
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <img id="shot" alt="" draggable="false" />
+      <div id="rect" hidden></div>
+    </div>
+    <div class="bar">
+      <span class="hint" id="hint">Drag a box around the equation or figure — it becomes a snippet on the page you came from.</span>
+      <span class="spacer"></span>
+      <button id="cancel" type="button">Cancel</button>
+      <button id="use" class="primary" type="button" disabled>Add as snippet</button>
+    </div>
+    <script type="module" src="./crop.ts"></script>
+  </body>
+</html>

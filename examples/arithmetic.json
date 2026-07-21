@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "concepts": [
+    { "name": "Addition", "description": "Combining quantities." },
+    { "name": "Multiplication", "description": "Repeated addition.", "tags": ["#difficulty:2"], "prerequisites": ["Addition"] },
+    { "name": "Exponentiation", "description": "Repeated multiplication.", "tags": ["#difficulty:3"], "prerequisites": ["Multiplication"] }
+  ],
+  "sources": [
+    {
+      "title": "Khan Academy: Intro to Multiplication",
+      "directUrl": "https://www.khanacademy.org/math/arithmetic/multiplication",
+      "modality": "video",
+      "estimatedDurationMins": 8,
+      "tags": ["#beginner"],
+      "explains": ["Multiplication"]
+    }
+  ],
+  "tracks": [
+    {
+      "title": "Intro Arithmetic",
+      "goal": "Build up from addition to exponentiation.",
+      "includes": ["Addition", "Multiplication", "Exponentiation"]
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Philomatic — install the capture bookmarklet</title>
+    <style>
+      body { font: 16px/1.6 system-ui, sans-serif; max-width: 44rem; margin: 3rem auto; padding: 0 1.25rem; color: #1f2328; }
+      h1 { font-size: 1.5rem; }
+      code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: #f6f8fa; border-radius: 6px; }
+      code { padding: 2px 6px; }
+      pre { padding: 12px 14px; overflow-x: auto; }
+      .drag { display: inline-block; margin: 1rem 0; padding: 10px 18px; background: #1f883d; color: #fff; border-radius: 8px; text-decoration: none; font-weight: 600; }
+      .note { color: #57606a; font-size: 0.9rem; }
+      ol { padding-left: 1.25rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Remember this — Philomatic capture bookmarklet</h1>
+
+    <p>
+      Start the local ingest service, then drag the button below to your bookmarks bar. Click it on
+      any page to have your graph remember that source.
+    </p>
+
+    <ol>
+      <li>Start the service: <code>pnpm serve</code> (defaults to <code>http://127.0.0.1:4321</code>).</li>
+      <li>Drag this button to your bookmarks bar:
+        <br />
+        <!-- The minified browser/bookmarklet.js. Edit PORT/TOKEN there and re-minify to change it. -->
+        <a
+          class="drag"
+          href="javascript:(function(){var P=4321,T='',B='http://127.0.0.1:'+P,h={'Content-Type':'application/json'};if(T)h['X-Ingest-Token']=T;function t(x,o){var e=document.createElement('div');e.textContent=x;e.style.cssText='position:fixed;z-index:2147483647;top:16px;right:16px;max-width:320px;padding:10px 14px;border-radius:8px;font:14px/1.4 system-ui,sans-serif;color:%23fff;box-shadow:0 4px 16px rgba(0,0,0,.25);background:'+(o?'%231f883d':'%23cf222e')+';';document.body.appendChild(e);setTimeout(function(){e.remove()},3200)}function p(u,b){return fetch(B+u,{method:'POST',headers:h,body:JSON.stringify(b)}).then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j}})})}var s=String(window.getSelection?window.getSelection():'').trim().slice(0,2000);p('/ingest',{url:location.href,title:document.title,tags:[]}).then(function(r){if(!r.ok)throw new Error(r.j.error||'ingest error');if(!s)return{j:{created:false}};return p('/snippet',{url:location.href,text:s})}).then(function(n){t(s?'Philomatic saved a highlight'+(n&&n.j&&n.j.created===false?' (already had it)':''):'Philomatic remembered this source',true)}).catch(function(e){t('Philomatic: '+e.message,false)})})();"
+          >📚 Remember (Philomatic)</a
+        >
+      </li>
+      <li>Visit any page and click the bookmark. A toast confirms the capture.</li>
+      <li>Verify from the CLI against the same database:
+        <pre>pnpm philomatic list sources
+pnpm philomatic list events</pre>
+      </li>
+    </ol>
+
+    <p class="note">
+      The bookmarklet runs in the visited page's origin, so a page with a strict
+      <code>Content-Security-Policy</code> can block the request — that's the known Stage-0 limit
+      (the extension removes it). If you run the service with <code>--token &lt;t&gt;</code>, edit
+      <code>TOKEN</code> in <code>browser/bookmarklet.js</code> to match and re-drag.
+    </p>
+  </body>
+</html>
