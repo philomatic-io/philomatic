@@ -11,6 +11,7 @@
  * actual in-family ties ride along for the chips row. Derived, read-only — the ABOUT pool
  * is candidates; topic grouping is NOT membership and never publishes.
  */
+import { orderedSources } from './order';
 import { conceptFamily } from '../../../src/graph/family';
 import type { AssembleResult, GraphEnvelope, SourceView } from '../client/types';
 
@@ -59,6 +60,8 @@ interface Projection {
   depth: Map<string, number>;
   /** Owning main per family concept (a main owns itself). */
   owner: Map<string, string | undefined>;
+  /** Per source: the family concept it ANCHORS at (its earliest-ranked in-family tie). */
+  anchorOf: Map<string, string>;
 }
 
 function project(asm: AssembleResult, graph: GraphEnvelope, trackId: string, allSources: SourceView[]): Projection {
@@ -86,6 +89,7 @@ function project(asm: AssembleResult, graph: GraphEnvelope, trackId: string, all
   for (const [id, r] of fam.rank) order.set(id, { level: 0, seq: r });
 
   const byMain = new Map<string, { source: SourceView; ties: { id: string; name: string }[] }[]>();
+  const anchorOf = new Map<string, string>();
   for (const s of allSources) {
     const tieIds = s.about
       .map((n) => idByName.get(n))
@@ -94,6 +98,11 @@ function project(asm: AssembleResult, graph: GraphEnvelope, trackId: string, all
     const topTie = tieIds.slice().sort((a, b) => order.get(a)!.level - order.get(b)!.level || order.get(a)!.seq - order.get(b)!.seq)[0]!;
     const owner = fam.ownerOf.get(topTie);
     if (owner === undefined) continue;
+    // ONE assignment for every consumer: the source ANCHORS at its top tie (earliest-ranked
+    // in-family tie); grouping views roll that up to the tie's owner main. A finer-grained
+    // view (the graph tier) hangs the source at the anchor itself — same rule, two zooms,
+    // so the views can never disagree about where a source lives.
+    anchorOf.set(s.id, topTie);
     if (!byMain.has(owner)) byMain.set(owner, []);
     byMain.get(owner)!.push({ source: s, ties: tieIds.map((id) => ({ id, name: byId.get(id)!.name })) });
   }
@@ -120,7 +129,95 @@ function project(asm: AssembleResult, graph: GraphEnvelope, trackId: string, all
     mains: fam.mains,
     depth: fam.depth,
     owner: fam.ownerOf,
+    anchorOf,
   };
+}
+
+/** The ONE definition of a concept-anchored track: membership is concepts, not sources.
+ *  Every view must use this — ad-hoc variants (filtered-source emptiness etc.) drifted. */
+export function isConceptAnchored(track: { sourceIds: readonly string[] }): boolean {
+  return track.sourceIds.length === 0;
+}
+
+/** A concept-anchored track's reading list, FLAT: buildTopics' groups flattened in guarded-DFS
+ *  order, each source labeled with the concept group it sits under. The single source of truth
+ *  for "what does the reader actually read" on such a track (Journey path, Detail by-sources,
+ *  % consumed all consume this). */
+export function derivedReading(
+  asm: AssembleResult,
+  graph: GraphEnvelope,
+  trackId: string,
+  allSources: SourceView[],
+): { source: SourceView; concept: string }[] {
+  return buildTopics(asm, graph, trackId, allSources).flatMap((g) =>
+    g.sources.map((e) => ({ source: e.source, concept: g.conceptName })),
+  );
+}
+
+/** By-concept groups for EITHER anchor mode — the one entry point for "show this track by
+ *  concept" (Detail rail; owner gap 2026-07-21: the rail was empty for source-anchored tracks
+ *  while Journey's lens had a fallback — same-surface views must share one derivation).
+ *  Concept-anchored → buildTopics (owner-main groups). Source-anchored → the MEMBER sources
+ *  grouped under the concepts they're ABOUT, in the same guarded order as Journey's lens
+ *  fallback (orderedConceptsForSources), PRECEDES-ordered within each group; a source tied to
+ *  several listed concepts appears under each (ties semantics, matching the lens sublists). */
+export function topicsForTrack(
+  asm: AssembleResult,
+  graph: GraphEnvelope,
+  track: { id: string; sourceIds: readonly string[]; sourceLevels?: readonly (readonly string[])[] },
+  allSources: SourceView[],
+): TopicGroup[] {
+  if (isConceptAnchored(track)) return buildTopics(asm, graph, track.id, allSources);
+  const memberIds = new Set(track.sourceIds);
+  const members = allSources.filter((s) => memberIds.has(s.id));
+  const ordered = orderedConceptsForSources(asm, graph, orderedSources({ sourceIds: track.sourceIds, sourceLevels: track.sourceLevels ?? [] }).map((o) => o.id));
+  const listed = new Set(ordered.map((c) => c.name));
+  const idByName = new Map(ordered.map((c) => [c.name, c.id]));
+  const precedes = graph.edges.filter((e) => e.type === 'PRECEDES');
+  return ordered
+    .map((c) => {
+      const tied = members.filter((s) => s.about.includes(c.name));
+      return {
+        conceptId: c.id,
+        conceptName: c.name,
+        tags: c.tags,
+        sources: orderByPrecedes(tied, precedes).map((source) => ({
+          source,
+          ties: source.about.filter((n) => listed.has(n)).map((n) => ({ id: idByName.get(n)!, name: n })),
+        })),
+      };
+    })
+    .filter((g) => g.sources.length > 0);
+}
+
+/** The graph tier's data: the track's ordered concept family plus, per family concept, the
+ *  sources ANCHORED there (project()'s anchorOf — the same assignment buildTopics rolls up to
+ *  owner groups, so the tier and the grouped views always agree), PRECEDES-ordered. */
+export function conceptTier(
+  asm: AssembleResult,
+  graph: GraphEnvelope,
+  trackId: string,
+  allSources: SourceView[],
+): {
+  concepts: { id: string; name: string; tags: string[]; level: number; main: boolean }[];
+  sourcesOf: Map<string, SourceView[]>;
+} {
+  const p = project(asm, graph, trackId, allSources);
+  const mainSet = new Set(p.mains);
+  const concepts = [...p.familyIds]
+    .filter((id) => p.order.has(id))
+    .sort((a, b) => p.order.get(a)!.level - p.order.get(b)!.level || p.order.get(a)!.seq - p.order.get(b)!.seq)
+    .map((id) => ({ id, name: p.byId.get(id)!.name, tags: p.byId.get(id)!.tags, level: p.depth.get(id) ?? 0, main: mainSet.has(id) }));
+  const byAnchor = new Map<string, SourceView[]>();
+  for (const s of allSources) {
+    const anchor = p.anchorOf.get(s.id);
+    if (anchor === undefined) continue;
+    if (!byAnchor.has(anchor)) byAnchor.set(anchor, []);
+    byAnchor.get(anchor)!.push(s);
+  }
+  const sourcesOf = new Map<string, SourceView[]>();
+  for (const [cid, list] of byAnchor) sourcesOf.set(cid, orderByPrecedes(list, p.precedes));
+  return { concepts, sourcesOf };
 }
 
 export function buildTopics(asm: AssembleResult, graph: GraphEnvelope, trackId: string, allSources: SourceView[]): TopicGroup[] {
@@ -171,21 +268,32 @@ export function orderedConceptsAll(
 export function orderedConceptsForSources(
   asm: AssembleResult,
   graph: GraphEnvelope,
-  sourceIds: Set<string>,
+  /** The track's member sources IN READING ORDER (orderedSources) — the authored pedagogy. */
+  orderedSourceIds: readonly string[],
 ): { id: string; name: string; tags: string[]; main: boolean }[] {
   const base = new Map<string, number>();
   let seq = 0;
   for (const c of asm.levels.flat()) base.set(c.id, seq++);
   const byId = new Map(asm.levels.flat().map((c) => [c.id, c]));
-  const tied = new Set(
-    graph.edges.filter((e) => e.type === 'ABOUT' && sourceIds.has(e.srcId)).map((e) => e.dstId).filter((id) => base.has(id)),
-  );
-  const ids = [...tied];
+  const sourceIds = new Set(orderedSourceIds);
+  const readPos = new Map(orderedSourceIds.map((id, i) => [id, i]));
+  // Rank each tied concept by its FIRST appearance in the reading order (owner ruling,
+  // 2026-07-21): a source-anchored track's pedagogy lives in its PRECEDES/INCLUDES order, so
+  // the derived concept order follows the reading, not the corpus's assemble accident. Real
+  // PREREQUISITE_OF edges still dominate via the guard; this is the base rank beneath it.
+  const firstPos = new Map<string, number>();
+  for (const e of graph.edges) {
+    if (e.type !== 'ABOUT' || !sourceIds.has(e.srcId) || !base.has(e.dstId)) continue;
+    const p = readPos.get(e.srcId)!;
+    const cur = firstPos.get(e.dstId);
+    if (cur === undefined || p < cur) firstPos.set(e.dstId, p);
+  }
+  const ids = [...firstPos.keys()];
   const fam = conceptFamily({
     conceptIds: ids,
     prereqs: graph.edges.filter((e) => e.type === 'PREREQUISITE_OF'),
     mains: ids, // exactly the tied set, guarded-DFS ordered among themselves
-    baseRank: (a, b) => (base.get(a) ?? 0) - (base.get(b) ?? 0),
+    baseRank: (a, b) => firstPos.get(a)! - firstPos.get(b)! || (base.get(a) ?? 0) - (base.get(b) ?? 0),
   });
   return [...fam.familyIds]
     .sort((a, b) => (fam.rank.get(a) ?? 0) - (fam.rank.get(b) ?? 0))

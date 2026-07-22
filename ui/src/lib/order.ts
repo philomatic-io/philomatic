@@ -7,7 +7,6 @@
  * own step number, preserving the pre-ordering UX. Once any PRECEDES exists, the topological
  * level is the step number, so co-requisites share it ("same line").
  */
-import type { TrackView } from '../client/types';
 
 export interface OrderedSource {
   id: string;
@@ -15,7 +14,7 @@ export interface OrderedSource {
   level: number;
 }
 
-export function orderedSources(syl: TrackView): OrderedSource[] {
+export function orderedSources(syl: { sourceIds: readonly string[]; sourceLevels: readonly (readonly string[])[] }): OrderedSource[] {
   const includesIdx = new Map(syl.sourceIds.map((id, i) => [id, i]));
   const byIncludes = (a: string, b: string) => (includesIdx.get(a) ?? 0) - (includesIdx.get(b) ?? 0);
   const levels = syl.sourceLevels.length > 0 ? syl.sourceLevels : [syl.sourceIds];

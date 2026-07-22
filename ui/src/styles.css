@@ -547,6 +547,12 @@ code {
 .rail-topic-source {
   padding: 0.16rem 0.4rem 0.16rem 1.15rem;
   border-radius: 8px;
+  /* Title (author stacked beneath) grows; chips ride the right edge while there's room and
+     wrap to their own line below when there isn't. */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.15rem 0.6rem;
 }
 .rail-topic-source:hover {
   background: var(--surface);
@@ -570,7 +576,7 @@ code {
 }
 .rail-topic-title {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.4rem;
   background: none;
   border: none;
@@ -578,6 +584,17 @@ code {
   font-size: 0.84rem;
   padding: 0;
   text-align: left;
+  flex: 1 1 12rem; /* grow; below ~12rem the chips wrap under instead of squeezing the title */
+  min-width: 0;
+}
+.rail-topic-title > svg {
+  margin-top: 0.18em; /* icon rides the FIRST line now that the author stacks beneath */
+}
+.rail-topic-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
 }
 .rail-topic-author {
   color: var(--faint);
@@ -589,8 +606,10 @@ code {
 .rail-topic-chips {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 0.2rem;
-  margin-top: 0.15rem;
+  margin-left: auto; /* right edge while sharing the row */
+  padding-top: 0.1rem;
 }
 
 /* ── Track Outline (experiment): concept-anchored reading list ────────────── */
@@ -1742,7 +1761,15 @@ button.chip-x:hover {
 .tracked-concepts .chip:disabled {
   cursor: default;
 }
-.chip.seminal {
+/* Declared-taxonomy chips (⊂ subfield-of / ∈ topic-of) read in the concept hue. */
+.chip.tag-subfieldof,
+.chip.tag-topicof {
+  color: var(--k-concept);
+  border-color: color-mix(in srgb, var(--k-concept) 40%, transparent);
+  background: color-mix(in srgb, var(--k-concept) 10%, transparent);
+  white-space: nowrap;
+}
+.chip.tag-seminal {
   color: var(--raised);
   border-color: color-mix(in srgb, var(--raised) 50%, var(--chip-border));
   background: color-mix(in srgb, var(--raised) 12%, var(--chip-bg));

@@ -19,7 +19,7 @@ import { Icon, sourceIcon, type IconName } from '../components/Icon';
 import { relationWord } from '../lib/relations';
 import { orderedSources } from '../lib/order';
 import { SnippetText } from '../lib/snippet-md';
-import { orderedConcepts } from '../lib/topics';
+import { conceptTier, isConceptAnchored } from '../lib/topics';
 import type { AssembleResult, GraphEnvelope } from '../client/types';
 
 // Geometry (from the design): a fixed-width canvas, vertical flow, rounded elbows.
@@ -191,23 +191,17 @@ function buildLayout(
     ports[syl.id] = portY;
     const order = orderedSources(syl).map((o) => sourceById.get(o.id)).filter((s): s is SourceView => !!s);
 
-    // Concept-anchored track = no member sources but a concept family. Show that family as an
-    // indented tier under the box, each source nested under the MOST SPECIFIC concept it covers
-    // (owner req 2026-07-21). Source-anchored tracks keep the flat source list.
-    const concepts = order.length === 0 && projection ? orderedConcepts(projection.asm, projection.graph, syl.id) : [];
+    // Concept-anchored track: show its concept family as an indented tier under the box, each
+    // source hung at its ANCHOR concept — lib/topics.conceptTier, the same assignment
+    // buildTopics rolls up into owner groups, so this view and Journey/Detail always agree
+    // (debt fix 2026-07-21: this view briefly had its own "deepest tie" rule; they diverged).
+    const tier = isConceptAnchored(syl) && projection ? conceptTier(projection.asm, projection.graph, syl.id, snapshot.sources) : undefined;
+    const concepts = tier?.concepts ?? [];
     const conceptMode = concepts.length > 0;
 
     let meta: string;
     if (conceptMode) {
-      const cByName = new Map(concepts.map((c) => [c.name, c]));
-      const srcByConcept = new Map<string, SourceView[]>();
-      for (const s of snapshot.sources) {
-        const covered = s.about.map((n) => cByName.get(n)).filter((c): c is (typeof concepts)[number] => !!c);
-        if (covered.length === 0) continue;
-        const deepest = covered.slice().sort((a, b) => b.level - a.level)[0]!;
-        if (!srcByConcept.has(deepest.id)) srcByConcept.set(deepest.id, []);
-        srcByConcept.get(deepest.id)!.push(s);
-      }
+      const srcByConcept = tier!.sourcesOf;
       const total = [...srcByConcept.values()].reduce((n, xs) => n + xs.length, 0);
       meta = [`${concepts.length} concept${concepts.length === 1 ? '' : 's'} · ${total} source${total === 1 ? '' : 's'}`, syl.goal ?? ''].filter(Boolean).join(' · ');
       nodes.push({ key: `y-${syl.id}`, id: syl.id, kind: 'sylbox', x: SPINE_X, y: boxTop, label: syl.title, meta, icon: 'track', selected: isSel(syl.id), dimmed: dim(syl.id) });

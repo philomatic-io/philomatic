@@ -7,6 +7,7 @@ import { useEffect, useRef } from 'react';
 import type { Item, ItemKind } from '../lib/items';
 import { Icon, sourceIcon, type IconName } from '../components/Icon';
 import { SnippetText } from '../lib/snippet-md';
+import { TagChip } from '../components/TagChip';
 
 const KIND_LABEL: Record<Item['kind'], string> = {
   track: 'Track',
@@ -78,9 +79,7 @@ export function ItemList({
             <div className="item-title">{item.kind === 'snippet' ? <SnippetText text={item.title} inline /> : item.title}</div>
             <span className="item-meta">
               {item.tags.map((t) => (
-                <span key={t} className={t === '#seminal' ? 'chip seminal' : 'chip'}>
-                  {t}
-                </span>
+                <TagChip key={t} tag={t} />
               ))}
               {item.meta && <span>{item.meta}</span>}
             </span>

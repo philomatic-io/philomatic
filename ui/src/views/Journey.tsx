@@ -15,7 +15,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Books, PencilSimple, Play, SealQuestion, Star } from '@phosphor-icons/react';
-import { buildTopics, orderedConcepts, orderedConceptsForSources } from '../lib/topics';
+import { derivedReading, isConceptAnchored, orderedConcepts, orderedConceptsForSources } from '../lib/topics';
 import { resolveOrCreateConcept } from '../lib/concepts';
 import { SnippetText } from '../lib/snippet-md';
 import type { EngineClient } from '../client/transport';
@@ -23,6 +23,9 @@ import type { AssembleResult, GraphEnvelope, QuestionView, Snapshot, SnippetView
 import { Icon, sourceIcon } from '../components/Icon';
 import { orderedSources } from '../lib/order';
 import { SentimentTag } from '../lib/sentiment';
+import { TagChip } from '../components/TagChip';
+import { hierarchyLinks } from '../lib/ranks';
+import { relationWord } from '../lib/relations';
 
 type Focus = { kind: 'question' | 'snippet'; id: string };
 type Rel = 'raised' | 'answered' | undefined;
@@ -92,6 +95,14 @@ export function Journey({
 
   const sourceById = new Map(snapshot.sources.map((s) => [s.id, s]));
   const conceptIdByName = new Map(concepts.map((c) => [c.name, c.id]));
+  const conceptNameById = new Map(concepts.map((c) => [c.id, c.name]));
+  // Declared-taxonomy links (SubfieldOf/TopicOf per the framework declarations — lib/ranks
+  // reads hierarchy/hierarchyRole; no tag-name literals here). Rendered as chips on the
+  // By-concept rows: taxonomy alongside the prerequisite-guarded order, two axes two sources.
+  const taxLinks = useMemo(
+    () => (projection ? hierarchyLinks(projection.graph.edges) : new Map<string, never[]>()),
+    [projection],
+  );
   const activeSyl = snapshot.tracks.find((s) => s.id === sylId) ?? snapshot.tracks[0];
   const activeSylId = activeSyl?.id;
 
@@ -104,23 +115,23 @@ export function Journey({
     // No INCLUDED concepts → the concepts this track's member sources are ABOUT (the
     // territory its reading covers), guarded-DFS ordered (owner request, 2026-07-20).
     const track = snapshot.tracks.find((t) => t.id === activeSylId);
-    return orderedConceptsForSources(projection.asm, projection.graph, new Set(track?.sourceIds ?? []));
+    return track ? orderedConceptsForSources(projection.asm, projection.graph, orderedSources(track).map((o) => o.id)) : [];
   }, [pathView, activeSylId, projection, snapshot.tracks]);
   // PRECEDES-ordered path: co-requisites share a step number ("same line"); without any
   // ordering edges the INCLUDES order stands (one step each).
   const ordered = activeSyl ? orderedSources(activeSyl) : [];
   const levelOf = new Map(ordered.map((o) => [o.id, o.level]));
   const pathSources: SourceView[] = ordered.map((o) => sourceById.get(o.id)).filter((s): s is SourceView => !!s);
-  // A concepts-only track (no member sources) still has a reading order: the concept-anchored
-  // reading list flattened — buildTopics gives sources grouped by concept in guarded-DFS order,
-  // PRECEDES within each; flattening is the 'prerequisite guarded-DFS view of sources'.
-  const conceptSourceOrder: { source: SourceView; concept: string }[] =
-    projection && activeSylId && pathSources.length === 0
-      ? buildTopics(projection.asm, projection.graph, activeSylId, snapshot.sources).flatMap((g) =>
-          g.sources.map((e) => ({ source: e.source, concept: g.conceptName })),
-        )
-      : [];
-  const derivedSourceView = pathView === 'sources' && pathSources.length === 0 && conceptSourceOrder.length > 0;
+  // A concept-anchored track still has a reading order: the canonical derived reading list
+  // (lib/topics.derivedReading — the ONE flatten every view shares).
+  const conceptSourceOrder: { source: SourceView; concept: string }[] = useMemo(
+    () =>
+      projection && activeSyl && isConceptAnchored(activeSyl)
+        ? derivedReading(projection.asm, projection.graph, activeSyl.id, snapshot.sources)
+        : [],
+    [projection, activeSyl, snapshot.sources],
+  );
+  const derivedSourceView = pathView === 'sources' && conceptSourceOrder.length > 0;
   const activeSrc = srcId !== undefined ? sourceById.get(srcId) : undefined;
   const upNextId = pathSources.find((s) => !isConsumed(s))?.id;
 
@@ -418,12 +429,12 @@ export function Journey({
   const otherSources = activeSyl ? snapshot.sources.filter((s) => !activeSyl.sourceIds.includes(s.id)) : [];
   const shownConcepts = edit ? concepts : concepts.filter(isFollowed);
   const donePct = (srcs: SourceView[]) => (srcs.length > 0 ? Math.round((srcs.filter(isConsumed).length / srcs.length) * 100) : 0);
-  // A track's effective sources: its members, or (concepts-only) the concept-anchored
+  // A track's effective sources: its members, or (concept-anchored) the canonical derived
   // reading list — so % consumed counts what the reader actually reads (owner bug, 2026-07-20).
   const effectiveSources = (track: { id: string; sourceIds: string[] }): SourceView[] => {
-    if (track.sourceIds.length > 0) return track.sourceIds.map((id) => sourceById.get(id)).filter((x): x is SourceView => !!x);
+    if (!isConceptAnchored(track)) return track.sourceIds.map((id) => sourceById.get(id)).filter((x): x is SourceView => !!x);
     if (!projection) return [];
-    return buildTopics(projection.asm, projection.graph, track.id, snapshot.sources).flatMap((g) => g.sources.map((e) => e.source));
+    return derivedReading(projection.asm, projection.graph, track.id, snapshot.sources).map((e) => e.source);
   };
   const pct = activeSyl ? donePct(effectiveSources(activeSyl)) : 0;
 
@@ -587,6 +598,12 @@ export function Journey({
                     {(() => { const n = questionsOfConcept(c.name).length; return n > 0 ? (
                       <span className="open-questions" title={`${n} question${n === 1 ? '' : 's'} in this concept`}><SealQuestion size={13} weight="fill" /> {n}</span>
                     ) : null; })()}
+                    {(taxLinks.get(c.id) ?? []).map((l) => {
+                      const nm = conceptNameById.get(l.dstId);
+                      return nm === undefined ? null : (
+                        <TagChip key={`${l.tag}-${l.dstId}`} tag={l.tag} label={`${l.role === 'parent' ? '⊂' : '∈'} ${nm}`} title={`${relationWord('LINK', [l.tag])} ${nm}`} />
+                      );
+                    })}
                     <span className="path-x row-open" role="button" title="open in Library" onClick={(e) => { e.stopPropagation(); onOpenInLibrary(c.id); }}>
                       <Books size={13} />
                     </span>
@@ -768,7 +785,7 @@ export function Journey({
                 </span>
                 <span className="col-row-meta">
                   <span>{s.modality}{s.estimatedDurationMins ? ` · ${s.estimatedDurationMins} min` : ''}</span>
-                  {s.tags.includes('#seminal') && <span className="chip seminal">seminal</span>}
+                  {s.tags.includes('#seminal') && <TagChip tag="#seminal" label="seminal" />}
                 </span>
               </button>
             );
@@ -914,10 +931,7 @@ export function Journey({
 
 const trunc = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}…` : s);
 
-/** A tag chip; seminal works read amber (feedback). */
-export function TagChip({ tag }: { tag: string }) {
-  return <span className={tag === '#seminal' ? 'chip seminal' : 'chip'}>{tag}</span>;
-}
+
 
 function AddBox({
   label,

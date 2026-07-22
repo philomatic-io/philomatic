@@ -7,13 +7,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { CaretDoubleDown, CaretDoubleRight, Code, CopySimple, GitBranch, LinkSimple, PencilSimple } from '@phosphor-icons/react';
 import type { EngineClient } from '../client/transport';
 import type { AssembleResult, GraphEnvelope, NodeKind, QuestionView, Relation, SnippetView, Snapshot, SourceView } from '../client/types';
-import { buildTopics, nextMoves, type NextMove, type NextMoves, type TopicGroup } from '../lib/topics';
+import { buildTopics, derivedReading, isConceptAnchored, nextMoves, topicsForTrack, type NextMove, type NextMoves, type TopicGroup } from '../lib/topics';
 import { shortAuthors, type Item } from '../lib/items';
 import { relationWord } from '../lib/relations';
 import { SentimentTag } from '../lib/sentiment';
 import { Icon, sourceIcon } from '../components/Icon';
 import { ABOUT_TAGS, relationEdge, resolveOrCreateConcept } from '../lib/concepts';
 import { SnippetText } from '../lib/snippet-md';
+import { TagChip } from '../components/TagChip';
 import { SentimentSeg } from '../components/SentimentPicker';
 import { ModalityPicker } from '../components/ModalityPicker';
 
@@ -451,7 +452,7 @@ export function Detail({
 
       <Connections relations={connRelations} onNavigate={onNavigate} />
 
-      {track && <TrackPublishing track={track} conceptAnchored={conceptMembers.length > 0 && track.sourceIds.length === 0} client={client} refresh={refresh} notify={notify} />}
+      {track && <TrackPublishing track={track} conceptAnchored={conceptMembers.length > 0 && isConceptAnchored(track)} client={client} refresh={refresh} notify={notify} />}
 
       <div className="detail-actions">
         <button className="link-btn" onClick={() => onViewInMap(item.id)}>
@@ -576,12 +577,11 @@ export function TagEditor({
   return (
     <div className="detail-tags">
       {tags.map((t) => (
-        <span key={t} className={t === '#seminal' ? 'chip seminal' : 'chip'}>
-          {t}
+        <TagChip key={t} tag={t}>
           <button className="chip-x" aria-label={`remove ${t}`} onClick={() => void patchTags(tags.filter((x) => x !== t))}>
             ×
           </button>
-        </span>
+        </TagChip>
       ))}
       <input
         className="chip tag-add"
@@ -1025,8 +1025,8 @@ function TrackPath({
           {track.title}
         </button>
       )}
-      {track.sourceIds.length === 0 ? (
-        <p className="hint" style={{ padding: 0 }}>no sources yet</p>
+      {isConceptAnchored(track) ? (
+        <p className="hint" style={{ padding: 0 }}>no member sources — a concept-anchored track derives its reading</p>
       ) : listSources ? (
         <ol className="track-path">
           {ordered.map((sid, i) => (
@@ -1158,10 +1158,15 @@ function RailTopics({ topics, onNavigate, highlightId }: { topics: TopicGroup[];
           </button>
           {g.sources.map(({ source: src, ties }) => (
             <div key={src.id} className={src.id === highlightId ? 'rail-topic-source on' : 'rail-topic-source'}>
+              {/* Title with the author STACKED beneath it; the tie chips sit to the RIGHT when
+                  the row has room and wrap below it when it doesn't (owner request, 2026-07-21 —
+                  right-justified authors read badly). */}
               <button className="rail-topic-title" onClick={() => onNavigate(src.id)}>
                 <Icon name={sourceIcon(src.modality)} size={13} />
-                {src.title}
-                {src.author && <span className="rail-topic-author">{src.author}</span>}
+                <span className="rail-topic-texts">
+                  <span>{src.title}</span>
+                  {src.author && <span className="rail-topic-author">{shortAuthors(src.author)}</span>}
+                </span>
               </button>
               {ties.length > 0 && (
                 <div className="rail-topic-chips">
@@ -1225,17 +1230,18 @@ function TrackBody({
     setManual(true);
     setViewState(v);
   };
-  const topics = projection && view === 'concepts' ? buildTopics(projection.asm, projection.graph, track.id, snapshot.sources) : [];
+  const topics = useMemo(
+    () => (projection && view === 'concepts' ? topicsForTrack(projection.asm, projection.graph, track, snapshot.sources) : []),
+    [projection, view, track, snapshot.sources],
+  );
   const asm = projection?.asm;
   const includedConceptIds = new Set(conceptMembers.map((c) => c.otherId));
-  // Concepts-only track (no member sources): its By-sources view is the concept-anchored
-  // reading list flattened — the same derived order Journey shows (owner request, 2026-07-20).
-  const derivedReading =
-    projection && track.sourceIds.length === 0
-      ? buildTopics(projection.asm, projection.graph, track.id, snapshot.sources).flatMap((g) =>
-          g.sources.map((e) => ({ source: e.source, concept: g.conceptName })),
-        )
-      : [];
+  // Concept-anchored track: its By-sources view is the canonical derived reading list
+  // (lib/topics.derivedReading — the same order Journey shows, by construction).
+  const derived = useMemo(
+    () => (projection && isConceptAnchored(track) ? derivedReading(projection.asm, projection.graph, track.id, snapshot.sources) : []),
+    [projection, track, snapshot.sources],
+  );
   const allConceptRefs = (asm?.levels.flat() ?? []).map((c) => ({ id: c.id, name: c.name }));
   const unIncludeConcept = async (conceptId: string, name: string) => {
     try {
@@ -1325,9 +1331,9 @@ function TrackBody({
         </button>
       </div>
       {view === 'sources' ? (
-        track.sourceIds.length === 0 && derivedReading.length > 0 ? (
+        isConceptAnchored(track) && derived.length > 0 ? (
           <ol className="track-path">
-            {derivedReading.map(({ source: src }, i) => (
+            {derived.map(({ source: src }, i) => (
               <li key={src.id} className="path-row">
                 <button className="path-source" onClick={() => onNavigate(src.id)}>
                   <span className="path-num">{i + 1}</span>
@@ -1346,7 +1352,7 @@ function TrackBody({
         </>
         )
       ) : topics.length === 0 ? (
-        <p className="hint" style={{ padding: '0.3rem 0' }}>{asm ? 'no concepts included yet' : 'loading…'}</p>
+        <p className="hint" style={{ padding: '0.3rem 0' }}>{!asm ? 'loading…' : isConceptAnchored(track) ? 'no concepts included yet' : 'no member sources tied to concepts yet'}</p>
       ) : (
         <RailTopics topics={topics} onNavigate={onNavigate} />
       )}

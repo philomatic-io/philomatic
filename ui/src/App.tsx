@@ -26,6 +26,9 @@ const client: EngineClient = g.__PM_CLIENT__ ?? httpClient();
 const subscribeChanges = g.__PM_SUBSCRIBE__ ?? onEngineChange;
 const IS_DEMO = g.__PM_DEMO__ === true;
 type Tab = 'Library' | 'Journey' | 'Map' | 'Graph';
+// Graph view deprecated 2026-07-21 (owner: simplify the UI — fewer duplicate places to do
+// things; revisit later). Flip to bring the tab back; GraphView and its plumbing are kept.
+const SHOW_GRAPH_VIEW: boolean = false;
 
 /** `#map=<comma ids>` — the note-embed scope (obsidian /pm-embed-map). */
 const parseMapHash = (hash: string): string[] | undefined => {
@@ -400,9 +403,11 @@ export function App() {
           <button className={tab === 'Map' ? 'tab active' : 'tab'} onClick={() => setTab('Map')}>
             <GraphIcon size={15} /> Map
           </button>
-          <button className={tab === 'Graph' ? 'tab active' : 'tab'} onClick={() => setTab('Graph')}>
-            <GitBranch size={15} /> Graph
-          </button>
+          {SHOW_GRAPH_VIEW && (
+            <button className={tab === 'Graph' ? 'tab active' : 'tab'} onClick={() => setTab('Graph')}>
+              <GitBranch size={15} /> Graph
+            </button>
+          )}
         </span>
         <input className="search" placeholder="Search everything…" value={query} onChange={(e) => setQuery(e.target.value)} />
         <input
