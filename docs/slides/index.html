@@ -96,7 +96,18 @@
 
 <!-- 1 · Title -->
 <section class="center-slide">
-  <h1>Keep the thread.</h1>
+  <div style="position:relative; display:inline-block">
+    <h1 style="margin:0; white-space:nowrap"><span class="diamond" style="width:0.3em; height:0.3em; border-width:0.05em; margin-right:0.22em; vertical-align:0.08em"></span>Keep the thread<span style="color:var(--k-source)">.</span></h1>
+    <svg viewBox="0 0 600 44" preserveAspectRatio="none" style="display:block; width:100%; height:0.5em; margin-top:0.08em" aria-hidden="true">
+      <defs>
+        <linearGradient id="thread" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="var(--k-concept)"/>
+          <stop offset="1" stop-color="var(--k-source)"/>
+        </linearGradient>
+      </defs>
+      <path d="M 16 8 Q 300 44 584 8" fill="none" stroke="url(#thread)" stroke-width="2.6" stroke-linecap="round"/>
+    </svg>
+  </div>
   <p class="sub">Everything you learn, connected — so it never turns into a pile.</p>
   <p class="tiny" style="margin-top:3em">Philomatic · press <b>space</b> to move</p>
 </section>
