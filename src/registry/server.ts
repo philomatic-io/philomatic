@@ -60,11 +60,15 @@ export interface RegistryOptions {
    * the repo's build if it exists. `false` disables the route.
    */
   demoDist?: string | false;
+  /** The intro slideshow (docs/slides/index.html), served at /intro. Default: the repo's
+   *  copy if it exists. `false` disables the route. */
+  introHtml?: string | false;
   now?: () => number;
 }
 
 const UI_DIST = fileURLToPath(new URL('../../ui/dist', import.meta.url));
 const DEMO_DIST = fileURLToPath(new URL('../../ui/dist-demo', import.meta.url));
+const INTRO_HTML = fileURLToPath(new URL('../../docs/slides/index.html', import.meta.url));
 
 const STATIC_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -112,7 +116,7 @@ const esc = (s: string): string =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 /** The library page — deliberately dependency-free server-rendered HTML. */
-function libraryHtml(entries: RegistryEntry[], demo: boolean): string {
+function libraryHtml(entries: RegistryEntry[], demo: boolean, intro: boolean): string {
   const rows = entries
     .slice()
     .sort((a, b) => b.updatedAt - a.updatedAt)
@@ -144,7 +148,7 @@ function libraryHtml(entries: RegistryEntry[], demo: boolean): string {
 </style></head><body>
 <h1>Track registry <span>${entries.length} published track${entries.length === 1 ? '' : 's'}</span></h1>
 ${entries.length === 0 ? '<p class="empty">Nothing published yet. <code>philomatic push &lt;track&gt; --registry &lt;this url&gt;</code></p>' : `<ul>\n${rows}\n</ul>`}
-<footer>${demo ? '<p><a href="/demo/">Try the workbench in your browser</a> — the full engine, running locally in the page; nothing you do there leaves your tab.</p>' : ''}Every track is a self-contained publication bundle — <em>fork</em> one by downloading its
+<footer>${demo || intro ? `<p>${intro ? '<a href="/intro">New here? The two-minute tour.</a> ' : ''}${demo ? '<a href="/demo/">Try the workbench in your browser</a> — the full engine, running locally in the page; nothing you do there leaves your tab.' : ''}</p>` : ''}Every track is a self-contained publication bundle — <em>fork</em> one by downloading its
 JSON (add <code>.json</code> to any track URL) and importing it into your own Philomatic.</footer>
 </body></html>`;
 }
@@ -154,6 +158,7 @@ export function createRegistryServer(opts: RegistryOptions = {}): Server {
   const cap = opts.maxBundleBytes ?? 16_000_000;
   const uiDist = opts.uiDist ?? UI_DIST;
   const demoDist = opts.demoDist === false ? undefined : (opts.demoDist ?? (existsSync(DEMO_DIST) ? DEMO_DIST : undefined));
+  const introHtml = opts.introHtml === false ? undefined : (opts.introHtml ?? (existsSync(INTRO_HTML) ? INTRO_HTML : undefined));
   const now = opts.now ?? (() => Date.now());
   mkdirSync(join(dir, 'bundles'), { recursive: true });
   mkdirSync(join(dir, 'archive'), { recursive: true });
@@ -268,7 +273,7 @@ export function createRegistryServer(opts: RegistryOptions = {}): Server {
     if (method === 'GET' && (path === '/' || path === '/index.json')) {
       const entries = Object.values(index);
       if (path === '/index.json') sendJson(res, 200, { registryVersion: 1, tracks: entries });
-      else sendHtml(res, 200, libraryHtml(entries, demoDist !== undefined));
+      else sendHtml(res, 200, libraryHtml(entries, demoDist !== undefined, introHtml !== undefined));
       return;
     }
 
@@ -298,6 +303,13 @@ export function createRegistryServer(opts: RegistryOptions = {}): Server {
         pageCache.set(hash, page);
       }
       sendHtml(res, 200, page);
+      return;
+    }
+
+    // The intro deck — "Keep the thread", one self-contained RevealJS page (docs/slides).
+    if (method === 'GET' && introHtml !== undefined && (path === '/intro' || path === '/intro/')) {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', ...CORS });
+      res.end(readFileSync(introHtml));
       return;
     }
 
