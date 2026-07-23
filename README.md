@@ -17,7 +17,9 @@ learning graph helps you chart and retrace your own educational journey, sharing
 isolation — and the wasted effort — out of learning, giving others a path they can follow,
 fork, and make their own.
 
-**[Try the live demo →](https://philomatic.io/demo)** — the full engine compiled to
+**[Watch the two-minute tour →](https://philomatic.io/intro)** — what a learning graph is
+and why it beats a pile of bookmarks, in one short story. Then
+**[try the live demo →](https://philomatic.io/demo)** — the full engine compiled to
 WebAssembly, running and persisting entirely in your browser; nothing you do there leaves your
 machine, and no install is required.
 

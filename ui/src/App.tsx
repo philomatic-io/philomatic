@@ -67,11 +67,10 @@ export function App() {
   const [selectedConcepts, setSelectedConcepts] = useState<ReadonlySet<string>>(new Set());
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | undefined>();
-  // A freshly created entity: the detail opens its title editor for immediate naming.
-  const [justCreatedId, setJustCreatedId] = useState<string | undefined>();
-  // A create FORM for identity-named kinds (concept/question/snippet) — their name/text can't
-  // be renamed after creation, so they're typed in a draft form rather than created-then-named.
-  const [draftKind, setDraftKind] = useState<'concept' | 'question' | 'snippet' | undefined>();
+  // The create form for EVERY kind (owner bug 2026-07-22): name-first — Enter saves exactly
+  // what was typed. The old create-then-rename draft flow raced (keystrokes before the title
+  // editor mounted; refresh churn mid-edit) and left orphan "New track" placeholders.
+  const [draftKind, setDraftKind] = useState<'track' | 'source' | 'concept' | 'question' | 'snippet' | undefined>();
 
   const [toast, setToast] = useState<{ message: string; undoRef?: string } | undefined>();
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -169,41 +168,11 @@ export function App() {
     }
   };
 
-  // Create-in-detail (owner request, 2026-07-20): mint a placeholder entity, select it, and
-  // flag it so the detail opens its title editor with the placeholder selected.
-  const DRAFT_LABEL: Record<'track' | 'source', string> = { track: 'New track', source: 'New source' };
-  const createDraft = async (k: 'track' | 'source') => {
-    // An EXPLICIT unique id (owner bug): a title-derived id ('New track' → syl_new-track)
-    // upserts onto ANY existing entity of that name — including a RETRACTED one hidden from
-    // the live snapshot — so the create silently no-ops. A random draft id can't collide;
-    // renaming mints the proper slug id. The title is also uniquified for display clarity.
-    const rand = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    const id = k === 'track' ? `syl_draft-${rand}` : `src_draft-${rand}`;
-    const taken = new Set((k === 'track' ? snapshot?.tracks : snapshot?.sources)?.map((x) => x.title) ?? []);
-    let title = DRAFT_LABEL[k];
-    for (let n = 2; taken.has(title); n++) title = `${DRAFT_LABEL[k]} ${n}`;
-    try {
-      if (k === 'track') await client.importPayload({ version: 2, tracks: [{ id, title }] });
-      else await client.importPayload({ version: 2, sources: [{ id, title, modality: 'text' }] });
-      await refresh();
-      setSelectedId(id);
-      setJustCreatedId(id);
-      pushUndo(`create ${k} “${title}”`, () => client.remove(id));
-      notify(`Created ${k} “${title}”`);
-    } catch (e) {
-      notify(e instanceof Error ? e.message : String(e));
-    }
-  };
 
-  // '+ New <kind>' dispatch: mutable-name kinds (track/source) create-then-name a blank entity
-  // in the detail; identity-named kinds (concept/question/snippet) open a form there instead,
-  // since their name/text IS their id and can't be renamed after creation (owner req 2026-07-20).
-  const startNew = (k: 'concept' | 'track' | 'source' | 'question' | 'snippet') => {
-    if (k === 'track' || k === 'source') void createDraft(k);
-    else {
-      setSelectedId(undefined);
-      setDraftKind(k);
-    }
+  // '+ New <kind>' dispatch: every kind opens the name-first form in the detail slot.
+  const startNew = (k: 'track' | 'source' | 'concept' | 'question' | 'snippet') => {
+    setSelectedId(undefined);
+    setDraftKind(k);
   };
 
   const items = useMemo(() => (snapshot ? buildItems(snapshot, questions, conceptList) : []), [snapshot, questions, conceptList]);
@@ -238,9 +207,6 @@ export function App() {
     [items, kind, selectedTags, selectedConcepts, query, excludedTags, readState, modality, qstate],
   );
   const selected = useMemo(() => items.find((i) => i.id === selectedId), [items, selectedId]);
-  useEffect(() => {
-    if (justCreatedId !== undefined && selectedId !== justCreatedId) setJustCreatedId(undefined);
-  }, [selectedId, justCreatedId]);
   // Selecting any item dismisses an open draft form (the detail slot shows the selection).
   useEffect(() => {
     if (selectedId !== undefined) setDraftKind(undefined);
@@ -455,6 +421,7 @@ export function App() {
           client={client}
           refresh={refresh}
           notify={(m) => notify(m)}
+          pushUndo={pushUndo}
           onOpenInLibrary={(id) => {
             setSelectedId(id);
             setTab('Library');
@@ -551,7 +518,6 @@ export function App() {
           ) : selected ? (
             <Detail
               projection={projection}
-              justCreated={selectedId === justCreatedId}
               item={selected}
               snapshot={snapshot}
               questions={questions}

@@ -9,6 +9,7 @@ import type { EngineClient } from '../client/transport';
 import type { AssembleResult, GraphEnvelope, NodeKind, QuestionView, Relation, SnippetView, Snapshot, SourceView } from '../client/types';
 import { buildTopics, derivedReading, isConceptAnchored, nextMoves, topicsForTrack, type NextMove, type NextMoves, type TopicGroup } from '../lib/topics';
 import { shortAuthors, type Item } from '../lib/items';
+import { orderedSources } from '../lib/order';
 import { relationWord } from '../lib/relations';
 import { SentimentTag } from '../lib/sentiment';
 import { Icon, sourceIcon } from '../components/Icon';
@@ -33,7 +34,6 @@ const kindIcon = (kind: NodeKind) => <Icon name={kind === 'source' ? sourceIcon(
 
 export function Detail({
   projection,
-  justCreated,
   item,
   snapshot,
   questions,
@@ -52,7 +52,6 @@ export function Detail({
   /** The shared assemble+graph, fetched once per change by App. */
   projection?: { asm: AssembleResult; graph: GraphEnvelope };
   /** The selected item was just created — open its title editor for naming. */
-  justCreated?: boolean;
   /** The concept list (assemble projection) — the anchor editor's picker. */
   concepts: { id: string; name: string; tracked: boolean }[];
   /** Push an action's INVERSE onto the Ctrl+Z stack. */
@@ -309,10 +308,12 @@ export function Detail({
                 try {
                   if (source.consumed) {
                     await client.unconsume(source.id);
+                    pushUndo('mark unread', () => client.consume(source.id));
                     await refresh();
                     notify('Marked as unread — back to the Backlog');
                   } else {
                     await client.consume(source.id);
+                    pushUndo('mark read', () => client.unconsume(source.id));
                     await refresh();
                     notify('Marked as read ✓');
                   }
@@ -336,7 +337,7 @@ export function Detail({
         )}
       </div>
       {item.kind === 'source' || item.kind === 'track' ? (
-        <TitleEditor id={item.id} title={item.title} client={client} refresh={refresh} notify={notify} onRenamed={onNavigate} autoEdit={justCreated} />
+        <TitleEditor id={item.id} title={item.title} client={client} refresh={refresh} notify={notify} onRenamed={onNavigate} pushUndo={pushUndo} />
       ) : item.kind === 'snippet' && rawMd ? (
         <>
           <textarea
@@ -375,7 +376,7 @@ export function Detail({
         <h2>{item.title}</h2>
       )}
 
-      {source && <SourceBody source={source} snapshot={snapshot} client={client} refresh={refresh} notify={notify} onNavigate={onNavigate} />}
+      {source && <SourceBody source={source} snapshot={snapshot} client={client} refresh={refresh} notify={notify} pushUndo={pushUndo} onNavigate={onNavigate} />}
       {snippet && <SnippetBody snippet={snippet} questions={questions} client={client} refresh={refresh} notify={notify} pushUndo={pushUndo} onNavigate={onNavigate} />}
       {(source || snippet) && (
         <ConceptAnchors
@@ -485,7 +486,7 @@ function TitleEditor({
   refresh,
   notify,
   onRenamed,
-  autoEdit,
+  pushUndo,
 }: {
   id: string;
   title: string;
@@ -493,17 +494,17 @@ function TitleEditor({
   refresh: () => Promise<void>;
   notify: (m: string) => void;
   onRenamed?: (newId: string) => void;
-  /** Freshly created draft → open in edit mode with the placeholder selected. */
-  autoEdit?: boolean;
+  pushUndo?: (label: string, invert: () => Promise<unknown>) => void;
 }) {
-  const [editing, setEditing] = useState(autoEdit ?? false);
+  const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(title);
-  useEffect(() => setValue(title), [id, title]);
-  // A freshly-selected draft opens for naming even when TitleEditor is already mounted
-  // (selection reuses the instance, so initial state alone won't fire).
+  // Track the entity, but NEVER clobber the input while the user is typing (owner bug
+  // 2026-07-22: a refresh/selection churn mid-edit reset the value to the old title, and
+  // Enter then silently no-opped as "unchanged").
   useEffect(() => {
-    if (autoEdit) setEditing(true);
-  }, [id, autoEdit]);
+    if (!editing) setValue(title);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, title]);
 
   const save = async () => {
     setEditing(false);
@@ -514,6 +515,7 @@ function TitleEditor({
     }
     try {
       const result = await client.update(id, { title: next });
+      pushUndo?.(`rename “${next.slice(0, 30)}”`, () => client.update(result.targetId, { title }));
       await refresh();
       notify('Renamed ✓');
       if (result.targetId !== id) onRenamed?.(result.targetId); // track rename mints a new id
@@ -558,17 +560,21 @@ export function TagEditor({
   client,
   refresh,
   notify,
+  pushUndo,
 }: {
   id: string;
   tags: string[];
   client: EngineClient;
   refresh: () => Promise<void>;
   notify: (m: string) => void;
+  pushUndo?: (label: string, invert: () => Promise<unknown>) => void;
 }) {
   const [adding, setAdding] = useState('');
   const patchTags = async (next: string[]) => {
+    const before = tags.slice();
     try {
       await client.update(id, { tags: next });
+      pushUndo?.('edit tags', () => client.update(id, { tags: before }));
       await refresh();
     } catch (e) {
       notify(e instanceof Error ? e.message : String(e));
@@ -606,6 +612,7 @@ function SourceBody({
   client,
   refresh,
   notify,
+  pushUndo,
   onNavigate,
 }: {
   source: SourceView;
@@ -613,6 +620,7 @@ function SourceBody({
   client: EngineClient;
   refresh: () => Promise<void>;
   notify: (m: string) => void;
+  pushUndo?: (label: string, invert: () => Promise<unknown>) => void;
   onNavigate: (id: string) => void;
 }) {
   const snippets = snapshot.snippets.filter((s) => s.sourceId === source.id);
@@ -628,8 +636,8 @@ function SourceBody({
           <LinkSimple size={13} /> {source.url}
         </a>
       )}
-      <SourceFacts source={source} client={client} refresh={refresh} notify={notify} />
-      <TagEditor id={source.id} tags={source.tags} client={client} refresh={refresh} notify={notify} />
+      <SourceFacts source={source} client={client} refresh={refresh} notify={notify} pushUndo={pushUndo} />
+      <TagEditor id={source.id} tags={source.tags} client={client} refresh={refresh} notify={notify} pushUndo={pushUndo} />
       {snippets.length > 0 && (
         <>
           <div className="detail-section">Snippets ({snippets.length})</div>
@@ -654,11 +662,13 @@ function SourceFacts({
   client,
   refresh,
   notify,
+  pushUndo,
 }: {
   source: SourceView;
   client: EngineClient;
   refresh: () => Promise<void>;
   notify: (m: string) => void;
+  pushUndo?: (label: string, invert: () => Promise<unknown>) => void;
 }) {
   // Pencil-toggled like the title/goal editors (owner request, 2026-07-18): read-only text
   // until the pencil, so a stray click can't start an edit.
@@ -677,7 +687,9 @@ function SourceFacts({
       return;
     }
     try {
+      const before = source.author;
       await client.update(source.id, { author: next });
+      pushUndo?.('edit author', () => client.update(source.id, { author: before ?? '' }));
       await refresh();
       notify('Author saved ✓');
     } catch (e) {
@@ -791,7 +803,7 @@ function SnippetBody({
   // so no blockquote/"from" repeat here (feedback round 3).
   return (
     <>
-      <TagEditor id={snippet.id} tags={snippet.tags} client={client} refresh={refresh} notify={notify} />
+      <TagEditor id={snippet.id} tags={snippet.tags} client={client} refresh={refresh} notify={notify} pushUndo={pushUndo} />
       <label className="detail-field">
         Note
         <textarea value={note} onChange={(e) => setNote(e.target.value)} onBlur={() => void save()} placeholder="your note" rows={3} />
@@ -992,7 +1004,7 @@ function TrackPath({
   onRemoveMember,
   onMoveMember,
 }: {
-  track: { id: string; title: string; sourceIds: string[]; sourceLevels?: string[][] };
+  track: { id: string; title: string; sourceIds: string[]; sourceLevels?: string[][]; precedes?: { srcId: string; dstId: string }[] };
   snapshot: Snapshot;
   currentId?: string;
   showHeader?: boolean;
@@ -1008,7 +1020,9 @@ function TrackPath({
   const authorById = new Map(snapshot.sources.filter((s) => s.author !== undefined).map((s) => [s.id, s.author!]));
   // Display in the TOPO order the engine derives (levels flattened); without PRECEDES edges
   // that's exactly the INCLUDES order.
-  const ordered = track.sourceLevels?.flat() ?? track.sourceIds;
+  const orderedRows = orderedSources({ sourceIds: track.sourceIds, sourceLevels: track.sourceLevels ?? [], precedes: track.precedes });
+  const ordered = orderedRows.map((o) => o.id);
+  const unorderedIds = new Set(orderedRows.filter((o) => o.unordered).map((o) => o.id));
   // On a source detail (showHeader), the ordered list only earns its place when the track
   // has more than the current source — otherwise it's a one-item list highlighting the source
   // you're already looking at ("its own track"). On the track detail (no header) always
@@ -1032,7 +1046,7 @@ function TrackPath({
           {ordered.map((sid, i) => (
             <li key={sid} className="path-row">
               <button className={sid === currentId ? 'path-source current' : 'path-source'} onClick={() => onNavigate(sid)}>
-                <span className="path-num">{i + 1}</span>
+                <span className="path-num" title={unorderedIds.has(sid) ? 'unordered — reorder to give it a place' : undefined}>{unorderedIds.has(sid) ? '·' : i + 1}</span>
                 <span className="path-texts">
                   <span className="connection-target">{titleById.get(sid) ?? sid}</span>
                   {authorById.has(sid) && <span className="path-author">{shortAuthors(authorById.get(sid)!)}</span>}
@@ -1257,6 +1271,10 @@ function TrackBody({
     try {
       const c = await resolveOrCreateConcept(client, allConceptRefs, name);
       await client.link({ srcType: 'track', srcId: track.id, type: 'INCLUDES', dstType: 'concept', dstId: c.id });
+      pushUndo(`include “${c.name.slice(0, 30)}”`, async () => {
+        await client.unlink({ srcId: track.id, type: 'INCLUDES', dstId: c.id });
+        if (c.created) await client.remove(c.id); // the gesture minted it — un-mint too
+      });
       await refresh();
       notify(`Included “${c.name}” ✓`);
     } catch (e) {
@@ -1272,7 +1290,9 @@ function TrackBody({
     setEditingGoal(false);
     if (goal.trim() === (track.goal ?? '')) return;
     try {
+      const before = track.goal ?? '';
       await client.update(track.id, { goal: goal.trim() });
+      pushUndo('edit goal', () => client.update(track.id, { goal: before }));
       await refresh();
       notify('Saved ✓');
     } catch (e) {
@@ -1308,7 +1328,7 @@ function TrackBody({
           </button>
         </p>
       )}
-      <TagEditor id={track.id} tags={track.tags} client={client} refresh={refresh} notify={notify} />
+      <TagEditor id={track.id} tags={track.tags} client={client} refresh={refresh} notify={notify} pushUndo={pushUndo} />
 
       <div className="detail-section">Concepts covered</div>
       {conceptMembers.length > 0 && (

@@ -164,13 +164,13 @@ export function derivedReading(
 export function topicsForTrack(
   asm: AssembleResult,
   graph: GraphEnvelope,
-  track: { id: string; sourceIds: readonly string[]; sourceLevels?: readonly (readonly string[])[] },
+  track: { id: string; sourceIds: readonly string[]; sourceLevels?: readonly (readonly string[])[]; precedes?: readonly { srcId: string; dstId: string }[] },
   allSources: SourceView[],
 ): TopicGroup[] {
   if (isConceptAnchored(track)) return buildTopics(asm, graph, track.id, allSources);
   const memberIds = new Set(track.sourceIds);
   const members = allSources.filter((s) => memberIds.has(s.id));
-  const ordered = orderedConceptsForSources(asm, graph, orderedSources({ sourceIds: track.sourceIds, sourceLevels: track.sourceLevels ?? [] }).map((o) => o.id));
+  const ordered = orderedConceptsForSources(asm, graph, orderedSources({ sourceIds: track.sourceIds, sourceLevels: track.sourceLevels ?? [], precedes: track.precedes }).map((o) => o.id));
   const listed = new Set(ordered.map((c) => c.name));
   const idByName = new Map(ordered.map((c) => [c.name, c.id]));
   const precedes = graph.edges.filter((e) => e.type === 'PRECEDES');

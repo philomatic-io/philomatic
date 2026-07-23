@@ -1,8 +1,10 @@
 /**
- * Create-form for identity-named entities (concept / question / snippet) — owner request
- * 2026-07-20. Their name/text IS their id (can't be renamed after creation), so unlike
- * track/source (create-then-name in the detail) these are typed here and persisted on Create.
- * Rendered in the detail rail's slot; on success the new entity is selected and shows normally.
+ * The ONE create-form, for every kind (owner bug 2026-07-22): name-first — you type the
+ * name/text and Enter/Create persists exactly what you typed. Track/source used to be
+ * create-then-rename (a placeholder entity plus a focused title editor), but that had races
+ * by construction: keystrokes landing before the editor mounted, refresh churn mid-edit,
+ * orphan "New track" drafts. Rendered in the detail rail's slot; on success the new entity
+ * is selected and shows normally.
  */
 import { useState } from 'react';
 import { Icon } from '../components/Icon';
@@ -19,7 +21,7 @@ export function DraftForm({
   onCreated,
   onCancel,
 }: {
-  kind: 'concept' | 'question' | 'snippet';
+  kind: 'track' | 'source' | 'concept' | 'question' | 'snippet';
   client: EngineClient;
   snapshot: Snapshot | undefined;
   refresh: () => Promise<void>;
@@ -38,7 +40,17 @@ export function DraftForm({
     setBusy(true);
     try {
       let id: string | undefined;
-      if (kind === 'concept') {
+      if (kind === 'track') {
+        await client.importPayload({ version: 2, tracks: [{ title: value }] });
+        id = (await client.getSnapshot()).tracks.find((t) => t.title === value)?.id;
+      } else if (kind === 'source' && /^https?:\/\//i.test(value)) {
+        // A URL goes through the capture contract (modality inference, idempotent re-capture).
+        id = ((await client.captureSource({ url: value })) as { sourceId?: string }).sourceId;
+      } else if (kind === 'source') {
+        // A bare title is an offline source (a book, a lecture) — no URL to capture by.
+        await client.importPayload({ version: 2, sources: [{ title: value, modality: 'text' }] });
+        id = (await client.getSnapshot()).sources.find((x) => x.title === value)?.id;
+      } else if (kind === 'concept') {
         id = (await resolveOrCreateConcept(client, [], value)).id;
       } else if (kind === 'question') {
         await client.importPayload({ version: 2, questions: [{ text: value }] });
@@ -65,7 +77,8 @@ export function DraftForm({
     }
   };
 
-  const label = kind === 'concept' ? 'concept name' : kind === 'question' ? 'question text' : 'passage text';
+  const label =
+    kind === 'track' ? 'track name' : kind === 'source' ? 'title or URL' : kind === 'concept' ? 'concept name' : kind === 'question' ? 'question text' : 'passage text';
   return (
     <div className="pane detail draft-form">
       <div className="draft-head">

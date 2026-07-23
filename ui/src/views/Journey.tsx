@@ -43,6 +43,7 @@ export function Journey({
   client,
   refresh,
   notify,
+  pushUndo,
   onOpenInLibrary,
 }: {
   /** The shared assemble+graph, fetched once per change by App. */
@@ -53,6 +54,9 @@ export function Journey({
   client: EngineClient;
   refresh: () => Promise<void>;
   notify: (msg: string) => void;
+  /** Every mutation pushes its INVERSE here so Ctrl+Z works from this view too (owner bug
+   *  2026-07-22: Journey wrote through run() with no inverses — nothing here undid). */
+  pushUndo: (label: string, invert: () => Promise<unknown>) => void;
   onOpenInLibrary: (id: string) => void;
 }) {
   const [sylId, setSylId] = useState<string | undefined>();
@@ -79,10 +83,12 @@ export function Journey({
       try {
         if (s.consumed) {
           await client.unconsume(s.id);
+          pushUndo(`mark “${s.title.slice(0, 30)}” unread`, () => client.consume(s.id));
           await refresh();
           notify('Marked as unread');
         } else {
           await client.consume(s.id);
+          pushUndo(`mark “${s.title.slice(0, 30)}” read`, () => client.unconsume(s.id));
           await refresh();
           notify('Marked as read ✓');
         }
@@ -121,6 +127,7 @@ export function Journey({
   // ordering edges the INCLUDES order stands (one step each).
   const ordered = activeSyl ? orderedSources(activeSyl) : [];
   const levelOf = new Map(ordered.map((o) => [o.id, o.level]));
+  const unorderedIds = new Set(ordered.filter((o) => o.unordered).map((o) => o.id));
   const pathSources: SourceView[] = ordered.map((o) => sourceById.get(o.id)).filter((s): s is SourceView => !!s);
   // A concept-anchored track still has a reading order: the canonical derived reading list
   // (lib/topics.derivedReading — the ONE flatten every view shares).
@@ -186,28 +193,63 @@ export function Journey({
     setFocus(undefined);
   };
 
-  const run = async (fn: () => Promise<unknown>, ok: string) => {
+  // Every mutation flows through here; fn may RETURN {label, invert} and it lands on the
+  // app-wide undo stack — the rule of this file: no write without its inverse.
+  const run = async (fn: () => Promise<{ label: string; invert: () => Promise<unknown> } | void>, ok: string) => {
     try {
-      await fn();
+      const undo = await fn();
+      if (undo) pushUndo(undo.label, undo.invert);
       await refresh();
       notify(ok);
     } catch (e) {
       notify(e instanceof Error ? e.message : String(e));
     }
   };
-  const newTrack = (title: string) => run(() => client.importPayload({ version: 2, tracks: [{ title }] }), `Created track “${title}”`);
+  const newTrack = (title: string) =>
+    run(async () => {
+      await client.importPayload({ version: 2, tracks: [{ title }] });
+      const id = (await client.getSnapshot()).tracks.find((t) => t.title === title)?.id;
+      if (id !== undefined) return { label: `create track “${trunc(title, 30)}”`, invert: () => client.remove(id) };
+    }, `Created track “${title}”`);
   const addConcept = (name: string) =>
     activeSyl &&
     run(async () => {
       const c = await resolveOrCreateConcept(client, projection?.asm.levels.flat() ?? [], name);
       await client.link({ srcType: 'track', srcId: activeSyl.id, type: 'INCLUDES', dstType: 'concept', dstId: c.id });
+      return {
+        label: `include “${trunc(name, 30)}”`,
+        invert: async () => {
+          await client.unlink({ srcId: activeSyl.id, type: 'INCLUDES', dstId: c.id });
+          if (c.created) await client.remove(c.id); // the gesture minted it — un-mint too
+        },
+      };
     }, `Included “${trunc(name, 30)}” ✓`);
-  const addSource = (v: Record<string, string>) => run(() => client.captureSource({ url: v.url, title: v.title || undefined, track: activeSyl!.title }), 'Added source');
+  const addSource = (v: Record<string, string>) =>
+    run(async () => {
+      const r = (await client.captureSource({ url: v.url, title: v.title || undefined, track: activeSyl!.title })) as { sourceId?: string };
+      if (r.sourceId !== undefined) {
+        const sid = r.sourceId;
+        // Conservative inverse: take it back OFF the track (the source stays in the library —
+        // capture is idempotent, so it may have existed before this gesture).
+        return { label: 'add source to track', invert: () => client.unlink({ srcId: activeSyl!.id, type: 'INCLUDES', dstId: sid }) };
+      }
+    }, 'Added source');
   const askQuestion = (text: string) =>
     activeSrc?.url
-      ? run(() => client.captureSource({ url: activeSrc.url, raises: [text] }), 'Added question')
+      ? run(async () => {
+          await client.captureSource({ url: activeSrc.url, raises: [text] });
+          const q = (await client.getQuestions()).questions.find((x) => x.text === text);
+          if (q) return { label: `ask “${trunc(text, 30)}”`, invert: () => client.remove(q.id) };
+        }, 'Added question')
       : notify('This source has no URL, so a question can’t be attached here — add it from a snippet instead.');
-  const addSnippet = (text: string) => run(() => client.captureSnippet({ sourceId: activeSrc!.id, text }), 'Added snippet');
+  const addSnippet = (text: string) =>
+    run(async () => {
+      const r = (await client.captureSnippet({ sourceId: activeSrc!.id, text })) as { snippetId?: string };
+      if (r.snippetId !== undefined) {
+        const nid = r.snippetId;
+        return { label: 'capture snippet', invert: () => client.remove(nid) };
+      }
+    }, 'Added snippet');
   // Reference both entities by their real ids via a direct INCLUDES edge — resolving the source
   // by title would derive src_<slug> and miss sources that carry an explicit id.
   const addExistingSource = (s: SourceView) => {
@@ -218,6 +260,13 @@ export function Journey({
     return run(async () => {
       await client.link({ srcType: 'track', srcId: activeSyl!.id, type: 'INCLUDES', dstType: 'source', dstId: s.id });
       if (pair) await client.link({ srcType: 'source', srcId: pair.srcId, type: 'PRECEDES', dstType: 'source', dstId: pair.dstId, trackContextId: activeSyl!.id });
+      return {
+        label: `add “${trunc(s.title, 30)}” to track`,
+        invert: async () => {
+          if (pair) await client.unlink({ srcId: pair.srcId, type: 'PRECEDES', dstId: pair.dstId, trackContextId: activeSyl!.id });
+          await client.unlink({ srcId: activeSyl!.id, type: 'INCLUDES', dstId: s.id });
+        },
+      };
     }, `Added “${trunc(s.title, 30)}” to ${activeSyl!.title}`);
   };
 
@@ -228,6 +277,17 @@ export function Journey({
     void run(async () => {
       await client.unlink({ srcId: activeSyl.id, type: 'INCLUDES', dstId: sid });
       for (const p of touching) await client.unlink({ srcId: p.srcId, type: 'PRECEDES', dstId: p.dstId, trackContextId: activeSyl.id });
+      return {
+        label: 'remove from track',
+        invert: () =>
+          client.importPayload({
+            version: 2,
+            edges: [
+              { srcType: 'track', srcId: activeSyl.id, type: 'INCLUDES', dstType: 'source', dstId: sid },
+              ...touching.map((p) => ({ srcType: 'source', srcId: p.srcId, type: 'PRECEDES', dstType: 'source', dstId: p.dstId, trackContextId: activeSyl.id })),
+            ],
+          }),
+      };
     }, 'Removed from track — the source itself stays');
   };
   const moveMember = (sid: string, dir: -1 | 1) => {
@@ -246,6 +306,16 @@ export function Journey({
         version: 2,
         edges: newPairs.map((pp) => ({ srcType: 'source', srcId: pp.srcId, type: 'PRECEDES', dstType: 'source', dstId: pp.dstId, trackContextId: activeSyl.id })),
       });
+      return {
+        label: 'reorder',
+        invert: async () => {
+          for (const pp of newPairs) await client.unlink({ srcId: pp.srcId, type: 'PRECEDES', dstId: pp.dstId, trackContextId: activeSyl.id });
+          await client.importPayload({
+            version: 2,
+            edges: oldPairs.map((p) => ({ srcType: 'source', srcId: p.srcId, type: 'PRECEDES', dstType: 'source', dstId: p.dstId, trackContextId: activeSyl.id })),
+          });
+        },
+      };
     }, 'Reordered');
   };
   // Concept structure editing (feature/journey-concept-rails, 2026-07-20): the concept column
@@ -271,19 +341,30 @@ export function Journey({
       notify(`“${c.name}” is already in this track`);
       return;
     }
-    void run(() => client.link({ srcType: 'track', srcId: activeSyl.id, type: 'INCLUDES', dstType: 'concept', dstId: cid }), 'Included in track ✓');
+    void run(async () => {
+      await client.link({ srcType: 'track', srcId: activeSyl.id, type: 'INCLUDES', dstType: 'concept', dstId: cid });
+      return { label: 'include concept', invert: () => client.unlink({ srcId: activeSyl.id, type: 'INCLUDES', dstId: cid }) };
+    }, 'Included in track ✓');
   };
   const includeConceptAt = (cid: string, where: 'root' | 'end') => {
     if (!activeSyl) return;
     const anchor = where === 'root' ? conceptRows[0]?.id : conceptRows[conceptRows.length - 1]?.id;
     void run(async () => {
       await client.link({ srcType: 'track', srcId: activeSyl.id, type: 'INCLUDES', dstType: 'concept', dstId: cid });
-      if (anchor && anchor !== cid) {
-        const edge = where === 'root'
-          ? { srcType: 'concept', srcId: cid, type: 'PREREQUISITE_OF', dstType: 'concept', dstId: anchor }
-          : { srcType: 'concept', srcId: anchor, type: 'PREREQUISITE_OF', dstType: 'concept', dstId: cid };
-        await client.link(edge);
-      }
+      const edge =
+        anchor && anchor !== cid
+          ? where === 'root'
+            ? { srcId: cid, dstId: anchor }
+            : { srcId: anchor, dstId: cid }
+          : undefined;
+      if (edge) await client.link({ srcType: 'concept', srcId: edge.srcId, type: 'PREREQUISITE_OF', dstType: 'concept', dstId: edge.dstId });
+      return {
+        label: 'include concept',
+        invert: async () => {
+          if (edge) await client.unlink({ srcId: edge.srcId, type: 'PREREQUISITE_OF', dstId: edge.dstId });
+          await client.unlink({ srcId: activeSyl.id, type: 'INCLUDES', dstId: cid });
+        },
+      };
     }, where === 'root' ? 'Included as a root ✓' : 'Included at the end ✓');
   };
   const tieConcepts = (fromId: string, toId: string) => {
@@ -296,7 +377,10 @@ export function Journey({
         ? { srcType: 'concept', srcId: toId, type: 'PREREQUISITE_OF', dstType: 'concept', dstId: fromId }
         : { srcType: 'concept', srcId: fromId, type: 'PREREQUISITE_OF', dstType: 'concept', dstId: toId };
     void run(
-      () => client.link(edge),
+      async () => {
+        await client.link(edge);
+        return { label: 'tie concepts', invert: () => client.unlink({ srcId: edge.srcId, type: 'PREREQUISITE_OF', dstId: edge.dstId }) };
+      },
       rel === 'requires' ? `“${name(fromId)}” requires “${name(toId)}” ✓` : `“${name(fromId)}” is a prerequisite of “${name(toId)}” ✓`,
     );
   };
@@ -310,7 +394,10 @@ export function Journey({
       return;
     }
     void run(
-      () => client.link({ srcType: 'source', srcId: sid, type: 'ABOUT', dstType: 'concept', dstId: c.id, tags: [{ name: 'explains' }] }),
+      async () => {
+        await client.link({ srcType: 'source', srcId: sid, type: 'ABOUT', dstType: 'concept', dstId: c.id, tags: [{ name: 'explains' }] });
+        return { label: `tie “${trunc(src.title, 30)}” → ${c.name}`, invert: () => client.unlink({ srcId: sid, type: 'ABOUT', dstId: c.id }) };
+      },
       `“${trunc(src.title, 30)}” explains → ${c.name}`,
     );
   };
@@ -320,8 +407,17 @@ export function Journey({
   const untieSourceFromConcept = (sid: string, conceptName: string) => {
     const src = sourceById.get(sid);
     if (!src) return;
+    const cid = conceptIdByName.get(conceptName) ?? conceptName;
     void run(
-      () => client.unlink({ srcId: sid, type: 'ABOUT', dstId: conceptIdByName.get(conceptName) ?? conceptName }),
+      async () => {
+        await client.unlink({ srcId: sid, type: 'ABOUT', dstId: cid });
+        // Re-tie restores the UI's own creation shape (#explains); other tags the edge may
+        // have carried are the assertion-layer gap (ROADMAP §2.1).
+        return {
+          label: `untie “${trunc(src.title, 30)}”`,
+          invert: () => client.link({ srcType: 'source', srcId: sid, type: 'ABOUT', dstType: 'concept', dstId: cid, tags: [{ name: 'explains' }] }),
+        };
+      },
       `“${trunc(src.title, 30)}” untied from ${conceptName} — both stay in your library`,
     );
   };
@@ -335,6 +431,12 @@ export function Journey({
       const rels = await client.getRelations(cid);
       const parents = rels.relations.filter((r) => r.type === 'PREREQUISITE_OF' && r.direction === 'in' && familySet.has(r.otherId));
       for (const pr of parents) await client.unlink({ srcId: pr.otherId, type: 'PREREQUISITE_OF', dstId: cid });
+      return {
+        label: `remove “${trunc(name, 30)}” from family`,
+        invert: async () => {
+          for (const pr of parents) await client.link({ srcType: 'concept', srcId: pr.otherId, type: 'PREREQUISITE_OF', dstType: 'concept', dstId: cid });
+        },
+      };
     }, `“${name}” removed from this track's concept family — the concept itself stays`);
   };
   // Concept lens editing: × un-includes a topic; ↑/↓ author the prerequisite between
@@ -343,7 +445,10 @@ export function Journey({
   // validation and surface as a toast).
   const removeConcept = (cid: string) => {
     if (!activeSyl) return;
-    void run(() => client.unlink({ srcId: activeSyl.id, type: 'INCLUDES', dstId: cid }), 'Concept un-included — it stays in your library');
+    void run(async () => {
+      await client.unlink({ srcId: activeSyl.id, type: 'INCLUDES', dstId: cid });
+      return { label: 'un-include concept', invert: () => client.link({ srcType: 'track', srcId: activeSyl.id, type: 'INCLUDES', dstType: 'concept', dstId: cid }) };
+    }, 'Concept un-included — it stays in your library');
   };
 
   const commitRename = async (kind: 'track' | 'source', id: string, cur: string, next: string) => {
@@ -352,6 +457,7 @@ export function Journey({
     if (!title || title === cur) return;
     try {
       const r = await client.update(id, { title });
+      pushUndo(`rename “${trunc(title, 30)}”`, () => client.update(r.targetId, { title: cur }));
       await refresh();
       if (kind === 'track' && activeSyl?.id === id) setSylId(r.targetId); // follow the new slug id
       notify('Renamed ✓');
@@ -412,7 +518,16 @@ export function Journey({
     if (edges.length === 0) return;
     const title = sourceById.get(dragId)?.title ?? dragId;
     // Bulk path on purpose: placement writes membership + ordering pairs as one batch.
-    void run(() => client.importPayload({ version: 2, edges }), `Placed “${trunc(title, 30)}”`);
+    void run(async () => {
+      await client.importPayload({ version: 2, edges });
+      return {
+        label: `place “${trunc(title, 30)}”`,
+        invert: async () => {
+          for (const e of edges)
+            await client.unlink({ srcId: e.srcId!, type: e.type!, dstId: e.dstId!, ...(e.trackContextId ? { trackContextId: e.trackContextId } : {}) });
+        },
+      };
+    }, `Placed “${trunc(title, 30)}”`);
   };
   const zoneOf = (e: React.DragEvent): 'above' | 'below' | 'coreq' => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -499,7 +614,10 @@ export function Journey({
                   e.preventDefault();
                   e.stopPropagation();
                   setDropTarget(undefined);
-                  void run(() => client.link({ srcType: 'track', srcId: s.id, type: 'INCLUDES', dstType: 'concept', dstId: cid }), `Included in “${trunc(s.title, 30)}” ✓`);
+                  void run(async () => {
+                    await client.link({ srcType: 'track', srcId: s.id, type: 'INCLUDES', dstType: 'concept', dstId: cid });
+                    return { label: 'include concept', invert: () => client.unlink({ srcId: s.id, type: 'INCLUDES', dstId: cid }) };
+                  }, `Included in “${trunc(s.title, 30)}” ✓`);
                 }}
               >
                 <span className="col-row-title">
@@ -752,8 +870,8 @@ export function Journey({
                 }}
               >
                 <span className="col-row-title">
-                  <span className="path-num" title={pathSources.filter((x) => levelOf.get(x.id) === levelOf.get(s.id)).length > 1 ? 'co-requisites — same step' : `step ${(levelOf.get(s.id) ?? i) + 1}`}>
-                    {(levelOf.get(s.id) ?? i) + 1}
+                  <span className="path-num" title={unorderedIds.has(s.id) ? 'unordered — drag into the path to give it a place' : pathSources.filter((x) => levelOf.get(x.id) === levelOf.get(s.id)).length > 1 ? 'co-requisites — same step' : `step ${(levelOf.get(s.id) ?? i) + 1}`}>
+                    {unorderedIds.has(s.id) ? '·' : (levelOf.get(s.id) ?? i) + 1}
                   </span>
                   <span style={{ color: 'var(--k-source)' }}><Icon name={sourceIcon(s.modality)} size={14} /></span>
                   <span className="row-title-text">{s.title}</span>
