@@ -15,20 +15,24 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Books, PencilSimple, Play, SealQuestion, Star } from '@phosphor-icons/react';
-import { derivedReading, isConceptAnchored, orderedConcepts, orderedConceptsForSources } from '../lib/topics';
-import { resolveOrCreateConcept } from '../lib/concepts';
-import { SnippetText } from '../lib/snippet-md';
-import type { EngineClient } from '../client/transport';
-import type { AssembleResult, GraphEnvelope, QuestionView, Snapshot, SnippetView, SourceView } from '../client/types';
-import { Icon, sourceIcon } from '../components/Icon';
-import { orderedSources } from '../lib/order';
-import { SentimentTag } from '../lib/sentiment';
-import { TagChip } from '../components/TagChip';
-import { hierarchyLinks } from '../lib/ranks';
-import { relationWord } from '../lib/relations';
+import { derivedReading, isConceptAnchored, orderedConcepts, orderedConceptsForSources } from '../../lib/topics';
+import { resolveOrCreateConcept } from '../../lib/concepts';
+import { SnippetText } from '../../lib/snippet-md';
+import type { AssembleResult, GraphEnvelope, QuestionView, Snapshot, SnippetView, SourceView } from '../../client/types';
+import { Icon, sourceIcon } from '../../components/Icon';
+import { orderedSources } from '../../lib/order';
+import { SentimentTag } from '../../lib/sentiment';
+import { TagChip } from '../../components/TagChip';
+import { useAction, useEngine } from '../../engine-context';
+import { AddBox } from './AddBox';
+import { QuestionsColumn } from './QuestionsColumn';
+import { SnippetsColumn } from './SnippetsColumn';
+import { trunc, type Rel } from './shared';
+import { applyPlan, invert, isEmpty, planAdd, planMove, planPlace, planRemove } from '../../lib/reorder';
+import { useJourneyState } from './useJourneyState';
+import { hierarchyLinks } from '../../lib/ranks';
+import { relationWord } from '../../lib/relations';
 
-type Focus = { kind: 'question' | 'snippet'; id: string };
-type Rel = 'raised' | 'answered' | undefined;
 interface Concept {
   id: string;
   name: string;
@@ -40,10 +44,6 @@ export function Journey({
   snapshot,
   questions,
   concepts,
-  client,
-  refresh,
-  notify,
-  pushUndo,
   onOpenInLibrary,
 }: {
   /** The shared assemble+graph, fetched once per change by App. */
@@ -51,51 +51,40 @@ export function Journey({
   snapshot: Snapshot;
   questions: QuestionView[];
   concepts: Concept[];
-  client: EngineClient;
-  refresh: () => Promise<void>;
-  notify: (msg: string) => void;
-  /** Every mutation pushes its INVERSE here so Ctrl+Z works from this view too (owner bug
-   *  2026-07-22: Journey wrote through run() with no inverses — nothing here undid). */
-  pushUndo: (label: string, invert: () => Promise<unknown>) => void;
   onOpenInLibrary: (id: string) => void;
 }) {
-  const [sylId, setSylId] = useState<string | undefined>();
-  const [srcId, setSrcId] = useState<string | undefined>();
-  const [focus, setFocus] = useState<Focus | undefined>();
-  const [edit, setEdit] = useState(false);
-  // A source drag is in flight (row or palette) — shows the drop hint + empty-track target.
-  const [draggingSrc, setDraggingSrc] = useState(false);
-  // Zone-based drop targeting: the WHOLE row is the surface — top third places before it,
-  // bottom third after it, the middle makes a co-requisite. An insertion line / outline on the
-  // row itself shows the zone (feedback: the 8px gaps were needle-threading, and the palette
-  // drag painted the whole column instead of a target).
-  const [dropTarget, setDropTarget] = useState<{ id: string; zone: 'above' | 'below' | 'coreq' } | undefined>();
-  // Pencil rename in edit mode (tracks + sources). A track rename mints a NEW id (the title
-  // slugs it — rename-by-supersession in the engine), so the selection follows targetId.
-  const [renaming, setRenaming] = useState<{ kind: 'track' | 'source'; id: string } | undefined>();
-  // Read state writes the real verbs (owner request, 2026-07-19 — the un-verb exists now);
-  // follows remain a visual override until un-track ships.
-  const [followedOverride, setFollowedOverride] = useState<Record<string, boolean>>({});
+  // The engine seam: no client/refresh/notify/pushUndo props (maintainability phase 1).
+  const { client, refresh, notify } = useEngine();
+  const act = useAction();
+  const {
+    sylId, setSylId,
+    srcId, setSrcId,
+    focus, setFocus,
+    edit, setEdit,
+    draggingSrc, setDraggingSrc,
+    dropTarget, setDropTarget,
+    renaming, setRenaming,
+    followedOverride, setFollowedOverride,
+    pathView, setPathView,
+    draggingConcept, setDraggingConcept,
+    conceptRel, setConceptRel,
+    selectedConcept, setSelectedConcept,
+    expandedConcepts, toggleConceptExpand,
+  } = useJourneyState();
   const isConsumed = (s: SourceView) => s.consumed;
   const isFollowed = (c: Concept) => followedOverride[c.id] ?? c.tracked;
   const toggleConsumed = (s: SourceView) => {
-    void (async () => {
-      try {
+    void act(
+      async () => {
         if (s.consumed) {
           await client.unconsume(s.id);
-          pushUndo(`mark “${s.title.slice(0, 30)}” unread`, () => client.consume(s.id));
-          await refresh();
-          notify('Marked as unread');
-        } else {
-          await client.consume(s.id);
-          pushUndo(`mark “${s.title.slice(0, 30)}” read`, () => client.unconsume(s.id));
-          await refresh();
-          notify('Marked as read ✓');
+          return { label: `mark “${trunc(s.title, 30)}” unread`, invert: () => client.consume(s.id) };
         }
-      } catch (e) {
-        notify(e instanceof Error ? e.message : String(e));
-      }
-    })();
+        await client.consume(s.id);
+        return { label: `mark “${trunc(s.title, 30)}” read`, invert: () => client.unconsume(s.id) };
+      },
+      s.consumed ? 'Marked as unread' : 'Marked as read ✓',
+    );
   };
   const toggleFollowed = (c: Concept) => setFollowedOverride((o) => ({ ...o, [c.id]: !isFollowed(c) }));
 
@@ -112,8 +101,6 @@ export function Journey({
   const activeSyl = snapshot.tracks.find((s) => s.id === sylId) ?? snapshot.tracks[0];
   const activeSylId = activeSyl?.id;
 
-  // Concept lens for the path column: the track's whole family, flat, prerequisite-ordered.
-  const [pathView, setPathView] = useState<'sources' | 'concepts'>('sources');
   const conceptRows: { id: string; name: string; main: boolean }[] = useMemo(() => {
     if (pathView !== 'concepts' || !projection || !activeSylId) return [];
     const fam = orderedConcepts(projection.asm, projection.graph, activeSylId);
@@ -193,27 +180,22 @@ export function Journey({
     setFocus(undefined);
   };
 
-  // Every mutation flows through here; fn may RETURN {label, invert} and it lands on the
-  // app-wide undo stack — the rule of this file: no write without its inverse.
-  const run = async (fn: () => Promise<{ label: string; invert: () => Promise<unknown> } | void>, ok: string) => {
-    try {
-      const undo = await fn();
-      if (undo) pushUndo(undo.label, undo.invert);
-      await refresh();
-      notify(ok);
-    } catch (e) {
-      notify(e instanceof Error ? e.message : String(e));
-    }
-  };
   const newTrack = (title: string) =>
-    run(async () => {
+    act(async () => {
       await client.importPayload({ version: 2, tracks: [{ title }] });
-      const id = (await client.getSnapshot()).tracks.find((t) => t.title === title)?.id;
-      if (id !== undefined) return { label: `create track “${trunc(title, 30)}”`, invert: () => client.remove(id) };
+      // The inverse resolves the id at UNDO time — no conditional, so the write can never
+      // land without a way back.
+      return {
+        label: `create track “${trunc(title, 30)}”`,
+        invert: async () => {
+          const id = (await client.getSnapshot()).tracks.find((t) => t.title === title)?.id;
+          if (id !== undefined) await client.remove(id);
+        },
+      };
     }, `Created track “${title}”`);
   const addConcept = (name: string) =>
     activeSyl &&
-    run(async () => {
+    act(async () => {
       const c = await resolveOrCreateConcept(client, projection?.asm.levels.flat() ?? [], name);
       await client.link({ srcType: 'track', srcId: activeSyl.id, type: 'INCLUDES', dstType: 'concept', dstId: c.id });
       return {
@@ -225,115 +207,71 @@ export function Journey({
       };
     }, `Included “${trunc(name, 30)}” ✓`);
   const addSource = (v: Record<string, string>) =>
-    run(async () => {
+    act(async () => {
       const r = (await client.captureSource({ url: v.url, title: v.title || undefined, track: activeSyl!.title })) as { sourceId?: string };
-      if (r.sourceId !== undefined) {
-        const sid = r.sourceId;
-        // Conservative inverse: take it back OFF the track (the source stays in the library —
-        // capture is idempotent, so it may have existed before this gesture).
-        return { label: 'add source to track', invert: () => client.unlink({ srcId: activeSyl!.id, type: 'INCLUDES', dstId: sid }) };
-      }
+      const sid = r.sourceId;
+      // Conservative inverse: take it back OFF the track (the source stays in the library —
+      // capture is idempotent, so it may have existed before this gesture).
+      return {
+        label: 'add source to track',
+        invert: async () => {
+          if (sid !== undefined) await client.unlink({ srcId: activeSyl!.id, type: 'INCLUDES', dstId: sid });
+        },
+      };
     }, 'Added source');
   const askQuestion = (text: string) =>
     activeSrc?.url
-      ? run(async () => {
+      ? act(async () => {
           await client.captureSource({ url: activeSrc.url, raises: [text] });
-          const q = (await client.getQuestions()).questions.find((x) => x.text === text);
-          if (q) return { label: `ask “${trunc(text, 30)}”`, invert: () => client.remove(q.id) };
+          return {
+            label: `ask “${trunc(text, 30)}”`,
+            invert: async () => {
+              const q = (await client.getQuestions()).questions.find((x) => x.text === text);
+              if (q) await client.remove(q.id);
+            },
+          };
         }, 'Added question')
       : notify('This source has no URL, so a question can’t be attached here — add it from a snippet instead.');
   const addSnippet = (text: string) =>
-    run(async () => {
+    act(async () => {
       const r = (await client.captureSnippet({ sourceId: activeSrc!.id, text })) as { snippetId?: string };
-      if (r.snippetId !== undefined) {
-        const nid = r.snippetId;
-        return { label: 'capture snippet', invert: () => client.remove(nid) };
-      }
+      const nid = r.snippetId;
+      return {
+        label: 'capture snippet',
+        invert: async () => {
+          if (nid !== undefined) await client.remove(nid);
+        },
+      };
     }, 'Added snippet');
   // Reference both entities by their real ids via a direct INCLUDES edge — resolving the source
   // by title would derive src_<slug> and miss sources that carry an explicit id.
-  const addExistingSource = (s: SourceView) => {
-    // Join at the END of the reading order (owner bug report: a bare INCLUDES has no
-    // predecessors, so it topo-sorted to the TOP). PRECEDES only when an order exists.
-    const last = pathSources[pathSources.length - 1];
-    const pair = activeSyl!.precedes.length > 0 && last !== undefined && last.id !== s.id ? { srcId: last.id, dstId: s.id } : undefined;
-    return run(async () => {
-      await client.link({ srcType: 'track', srcId: activeSyl!.id, type: 'INCLUDES', dstType: 'source', dstId: s.id });
-      if (pair) await client.link({ srcType: 'source', srcId: pair.srcId, type: 'PRECEDES', dstType: 'source', dstId: pair.dstId, trackContextId: activeSyl!.id });
-      return {
-        label: `add “${trunc(s.title, 30)}” to track`,
-        invert: async () => {
-          if (pair) await client.unlink({ srcId: pair.srcId, type: 'PRECEDES', dstId: pair.dstId, trackContextId: activeSyl!.id });
-          await client.unlink({ srcId: activeSyl!.id, type: 'INCLUDES', dstId: s.id });
-        },
-      };
+  const addExistingSource = (s: SourceView) =>
+    // MEMBERSHIP ONLY (owner ruling 2026-07-22) — planned in lib/reorder like every other
+    // ordering gesture, so Journey and Detail can't drift apart on the rules again.
+    act(async () => {
+      const plan = planAdd(activeSyl!, s.id);
+      await applyPlan(client, plan);
+      return { label: `add “${trunc(s.title, 30)}” to track`, invert: () => applyPlan(client, invert(plan)) };
     }, `Added “${trunc(s.title, 30)}” to ${activeSyl!.title}`);
-  };
 
   // Member editing (owner request, 2026-07-19 — the Library track editor's ×/↑↓, here):
   const removeMember = (sid: string) => {
     if (!activeSyl) return;
-    const touching = activeSyl.precedes.filter((p) => p.srcId === sid || p.dstId === sid);
-    void run(async () => {
-      await client.unlink({ srcId: activeSyl.id, type: 'INCLUDES', dstId: sid });
-      for (const p of touching) await client.unlink({ srcId: p.srcId, type: 'PRECEDES', dstId: p.dstId, trackContextId: activeSyl.id });
-      return {
-        label: 'remove from track',
-        invert: () =>
-          client.importPayload({
-            version: 2,
-            edges: [
-              { srcType: 'track', srcId: activeSyl.id, type: 'INCLUDES', dstType: 'source', dstId: sid },
-              ...touching.map((p) => ({ srcType: 'source', srcId: p.srcId, type: 'PRECEDES', dstType: 'source', dstId: p.dstId, trackContextId: activeSyl.id })),
-            ],
-          }),
-      };
+    const plan = planRemove(activeSyl, sid);
+    void act(async () => {
+      await applyPlan(client, plan);
+      return { label: 'remove from track', invert: () => applyPlan(client, invert(plan)) };
     }, 'Removed from track — the source itself stays');
   };
   const moveMember = (sid: string, dir: -1 | 1) => {
     if (!activeSyl) return;
-    const order = pathSources.map((x) => x.id);
-    const i = order.indexOf(sid);
-    const j = i + dir;
-    if (i < 0 || j < 0 || j >= order.length) return;
-    [order[i], order[j]] = [order[j]!, order[i]!];
-    const oldPairs = activeSyl.precedes;
-    const newPairs = order.slice(0, -1).map((a, k) => ({ srcId: a, dstId: order[k + 1]! }));
-    void run(async () => {
-      for (const p of oldPairs) await client.unlink({ srcId: p.srcId, type: 'PRECEDES', dstId: p.dstId, trackContextId: activeSyl.id });
-      // Bulk path on purpose: a chain rewrite is one batch (one validation), not N intents.
-      await client.importPayload({
-        version: 2,
-        edges: newPairs.map((pp) => ({ srcType: 'source', srcId: pp.srcId, type: 'PRECEDES', dstType: 'source', dstId: pp.dstId, trackContextId: activeSyl.id })),
-      });
-      return {
-        label: 'reorder',
-        invert: async () => {
-          for (const pp of newPairs) await client.unlink({ srcId: pp.srcId, type: 'PRECEDES', dstId: pp.dstId, trackContextId: activeSyl.id });
-          await client.importPayload({
-            version: 2,
-            edges: oldPairs.map((p) => ({ srcType: 'source', srcId: p.srcId, type: 'PRECEDES', dstType: 'source', dstId: p.dstId, trackContextId: activeSyl.id })),
-          });
-        },
-      };
+    const plan = planMove(activeSyl, sid, dir);
+    if (isEmpty(plan)) return;
+    void act(async () => {
+      await applyPlan(client, plan);
+      return { label: 'reorder', invert: () => applyPlan(client, invert(plan)) };
     }, 'Reordered');
   };
-  // Concept structure editing (feature/journey-concept-rails, 2026-07-20): the concept column
-  // is a flat guarded-DFS ordering; drag a concept ONTO the track to include it, or (with a
-  // relation selected) onto another concept to author that tie.
-  const [draggingConcept, setDraggingConcept] = useState<string | undefined>();
-  const [conceptRel, setConceptRel] = useState<'requires' | 'prereq-of'>('prereq-of');
-  // Clicking a concept shows its questions (owner request, 2026-07-20) — a concept selection
-  // that supersedes the source selection in the Questions column.
-  const [selectedConcept, setSelectedConcept] = useState<{ id: string; name: string } | undefined>();
-  // Clicking a concept ALSO expands its direct sources inline (owner request, 2026-07-20) —
-  // the drill-down to source-tied questions.
-  const [expandedConcepts, setExpandedConcepts] = useState<ReadonlySet<string>>(new Set());
-  const toggleConceptExpand = (cid: string) => setExpandedConcepts((prev) => {
-    const n = new Set(prev);
-    n.has(cid) ? n.delete(cid) : n.add(cid);
-    return n;
-  });
   const includeConceptToTrack = (cid: string) => {
     if (!activeSyl) return;
     const c = conceptRows.find((r) => r.id === cid);
@@ -341,7 +279,7 @@ export function Journey({
       notify(`“${c.name}” is already in this track`);
       return;
     }
-    void run(async () => {
+    void act(async () => {
       await client.link({ srcType: 'track', srcId: activeSyl.id, type: 'INCLUDES', dstType: 'concept', dstId: cid });
       return { label: 'include concept', invert: () => client.unlink({ srcId: activeSyl.id, type: 'INCLUDES', dstId: cid }) };
     }, 'Included in track ✓');
@@ -349,7 +287,7 @@ export function Journey({
   const includeConceptAt = (cid: string, where: 'root' | 'end') => {
     if (!activeSyl) return;
     const anchor = where === 'root' ? conceptRows[0]?.id : conceptRows[conceptRows.length - 1]?.id;
-    void run(async () => {
+    void act(async () => {
       await client.link({ srcType: 'track', srcId: activeSyl.id, type: 'INCLUDES', dstType: 'concept', dstId: cid });
       const edge =
         anchor && anchor !== cid
@@ -376,7 +314,7 @@ export function Journey({
       rel === 'requires'
         ? { srcType: 'concept', srcId: toId, type: 'PREREQUISITE_OF', dstType: 'concept', dstId: fromId }
         : { srcType: 'concept', srcId: fromId, type: 'PREREQUISITE_OF', dstType: 'concept', dstId: toId };
-    void run(
+    void act(
       async () => {
         await client.link(edge);
         return { label: 'tie concepts', invert: () => client.unlink({ srcId: edge.srcId, type: 'PREREQUISITE_OF', dstId: edge.dstId }) };
@@ -393,7 +331,7 @@ export function Journey({
       notify(`“${trunc(src.title, 30)}” is already tied to ${c.name}`);
       return;
     }
-    void run(
+    void act(
       async () => {
         await client.link({ srcType: 'source', srcId: sid, type: 'ABOUT', dstType: 'concept', dstId: c.id, tags: [{ name: 'explains' }] });
         return { label: `tie “${trunc(src.title, 30)}” → ${c.name}`, invert: () => client.unlink({ srcId: sid, type: 'ABOUT', dstId: c.id }) };
@@ -408,7 +346,7 @@ export function Journey({
     const src = sourceById.get(sid);
     if (!src) return;
     const cid = conceptIdByName.get(conceptName) ?? conceptName;
-    void run(
+    void act(
       async () => {
         await client.unlink({ srcId: sid, type: 'ABOUT', dstId: cid });
         // Re-tie restores the UI's own creation shape (#explains); other tags the edge may
@@ -427,7 +365,7 @@ export function Journey({
   // whose only path ran through it drop out with it (the family is derived).
   const removeSubConcept = (cid: string, name: string) => {
     const familySet = new Set(conceptRows.map((r) => r.id));
-    void run(async () => {
+    void act(async () => {
       const rels = await client.getRelations(cid);
       const parents = rels.relations.filter((r) => r.type === 'PREREQUISITE_OF' && r.direction === 'in' && familySet.has(r.otherId));
       for (const pr of parents) await client.unlink({ srcId: pr.otherId, type: 'PREREQUISITE_OF', dstId: cid });
@@ -445,25 +383,36 @@ export function Journey({
   // validation and surface as a toast).
   const removeConcept = (cid: string) => {
     if (!activeSyl) return;
-    void run(async () => {
+    const familySet = new Set(conceptRows.map((r) => r.id));
+    void act(async () => {
+      // × means "off this track" — so cut the in-family PREREQUISITE_OF ties too (owner bug
+      // 2026-07-22: un-including alone left the concept in the FAMILY via the positioning
+      // edge that including it wrote, so it reappeared as a child of the last concept).
+      const rels = await client.getRelations(cid);
+      const ties = rels.relations
+        .filter((r) => r.type === 'PREREQUISITE_OF' && familySet.has(r.otherId))
+        .map((r) => (r.direction === 'in' ? { srcId: r.otherId, dstId: cid } : { srcId: cid, dstId: r.otherId }));
       await client.unlink({ srcId: activeSyl.id, type: 'INCLUDES', dstId: cid });
-      return { label: 'un-include concept', invert: () => client.link({ srcType: 'track', srcId: activeSyl.id, type: 'INCLUDES', dstType: 'concept', dstId: cid }) };
-    }, 'Concept un-included — it stays in your library');
+      for (const t of ties) await client.unlink({ srcId: t.srcId, type: 'PREREQUISITE_OF', dstId: t.dstId });
+      return {
+        label: 'un-include concept',
+        invert: async () => {
+          await client.link({ srcType: 'track', srcId: activeSyl.id, type: 'INCLUDES', dstType: 'concept', dstId: cid });
+          for (const t of ties) await client.link({ srcType: 'concept', srcId: t.srcId, type: 'PREREQUISITE_OF', dstType: 'concept', dstId: t.dstId });
+        },
+      };
+    }, 'Removed from this track — the concept stays in your library');
   };
 
   const commitRename = async (kind: 'track' | 'source', id: string, cur: string, next: string) => {
     setRenaming(undefined);
     const title = next.trim();
     if (!title || title === cur) return;
-    try {
+    await act(async () => {
       const r = await client.update(id, { title });
-      pushUndo(`rename “${trunc(title, 30)}”`, () => client.update(r.targetId, { title: cur }));
-      await refresh();
       if (kind === 'track' && activeSyl?.id === id) setSylId(r.targetId); // follow the new slug id
-      notify('Renamed ✓');
-    } catch (e) {
-      notify(e instanceof Error ? e.message : String(e));
-    }
+      return { label: `rename “${trunc(title, 30)}”`, invert: () => client.update(r.targetId, { title: cur }) };
+    }, 'Renamed ✓');
   };
   const renameInput = (kind: 'track' | 'source', id: string, cur: string) => (
     <div className="col-row on">
@@ -501,32 +450,13 @@ export function Journey({
   // ordered item can contradict its old edges — the engine's per-context cycle validation
   // rejects that cleanly and the error surfaces as a toast.
   const placeSource = (dragId: string, at: { aboveId?: string; belowId?: string; coreqId?: string }) => {
-    // A neighbour that IS the dragged item is fine (prec() skips self-edges); only a self-coreq
-    // is meaningless.
-    if (!activeSyl || at.coreqId === dragId) return;
-    const edges: Record<string, string>[] = [];
-    if (!activeSyl.sourceIds.includes(dragId)) edges.push({ srcType: 'track', srcId: activeSyl.id, type: 'INCLUDES', dstType: 'source', dstId: dragId });
-    const prec = (a: string, b: string) =>
-      a !== b && edges.push({ srcType: 'source', srcId: a, type: 'PRECEDES', dstType: 'source', dstId: b, trackContextId: activeSyl.id });
-    if (at.coreqId) {
-      // Same line: share the target's predecessors, so both land on the same topological step.
-      for (const e of activeSyl.precedes) if (e.dstId === at.coreqId) prec(e.srcId, dragId);
-    } else {
-      if (at.aboveId) prec(at.aboveId, dragId);
-      if (at.belowId) prec(dragId, at.belowId);
-    }
-    if (edges.length === 0) return;
+    if (!activeSyl) return;
+    const plan = planPlace(activeSyl, dragId, at);
+    if (isEmpty(plan)) return;
     const title = sourceById.get(dragId)?.title ?? dragId;
-    // Bulk path on purpose: placement writes membership + ordering pairs as one batch.
-    void run(async () => {
-      await client.importPayload({ version: 2, edges });
-      return {
-        label: `place “${trunc(title, 30)}”`,
-        invert: async () => {
-          for (const e of edges)
-            await client.unlink({ srcId: e.srcId!, type: e.type!, dstId: e.dstId!, ...(e.trackContextId ? { trackContextId: e.trackContextId } : {}) });
-        },
-      };
+    void act(async () => {
+      await applyPlan(client, plan);
+      return { label: `place “${trunc(title, 30)}”`, invert: () => applyPlan(client, invert(plan)) };
     }, `Placed “${trunc(title, 30)}”`);
   };
   const zoneOf = (e: React.DragEvent): 'above' | 'below' | 'coreq' => {
@@ -614,7 +544,7 @@ export function Journey({
                   e.preventDefault();
                   e.stopPropagation();
                   setDropTarget(undefined);
-                  void run(async () => {
+                  void act(async () => {
                     await client.link({ srcType: 'track', srcId: s.id, type: 'INCLUDES', dstType: 'concept', dstId: cid });
                     return { label: 'include concept', invert: () => client.unlink({ srcId: s.id, type: 'INCLUDES', dstId: cid }) };
                   }, `Included in “${trunc(s.title, 30)}” ✓`);
@@ -970,132 +900,33 @@ export function Journey({
           })()}
         </div>
 
-        {/* 3 — Questions (split Open / Answered) */}
-        <div className="journey-col">
-          <div className="col-head">Questions{selectedConcept ? ` · ${selectedConcept.name}` : ''}</div>
-          {(() => {
-            const qs = selectedConcept ? questionsOfConcept(selectedConcept.name) : activeSrc ? insideQuestions : [];
-            if (!selectedConcept && !activeSrc) return <p className="hint">Pick a source or concept.</p>;
-            if (qs.length === 0) return <p className="hint">{selectedConcept ? `No questions in “${selectedConcept.name}” yet.` : 'No questions yet.'}</p>;
-            const open = qs.filter((q) => !q.answered);
-            const answered = qs.filter((q) => q.answered);
-            const row = (q: QuestionView) => {
-              const rel = relOfQuestion(q);
-              const fromSource = activeSrc !== undefined && q.raisedBy.some((r) => r.kind === 'source' && r.id === activeSrc.id);
-              const cls = ['col-row', focus?.id === q.id ? 'on' : '', rel ? `rel-${rel}` : ''].filter(Boolean).join(' ');
-              return (
-                <button key={q.id} className={cls} onClick={() => setFocus({ kind: 'question', id: q.id })}>
-                  <span className="col-row-title">
-                    <span style={{ color: 'var(--k-question)' }}><Icon name="question" size={13} /></span> {q.text}
-                    {rel === 'raised' && <span className="rel-badge raised">raised by ↑</span>}
-                    {rel === 'answered' && <span className="rel-badge answered">answered by ✓</span>}
-                  </span>
-                  {activeSrc && (
-                    <span className="col-row-meta">
-                      <span className={fromSource ? 'src-badge source' : 'src-badge snippet'}>{fromSource ? 'from source' : 'from a snippet'}</span>
-                    </span>
-                  )}
-                </button>
-              );
-            };
-            return (
-              <>
-                {open.length > 0 && <div className="q-section open">Open · {open.length}</div>}
-                {open.map(row)}
-                {answered.length > 0 && <div className="q-section answered">Answered · {answered.length}</div>}
-                {answered.map(row)}
-              </>
-            );
-          })()}
-          {edit && activeSrc && <AddBox label="ask a question" fields={[{ key: 'text', placeholder: 'What do you want to know?' }]} onSubmit={(v) => askQuestion(v.text ?? '')} />}
-        </div>
+        <QuestionsColumn
+          selectedConcept={selectedConcept}
+          activeSrc={activeSrc}
+          insideQuestions={insideQuestions}
+          questionsOfConcept={questionsOfConcept}
+          relOfQuestion={relOfQuestion}
+          focus={focus}
+          setFocus={setFocus}
+          edit={edit}
+          askQuestion={askQuestion}
+        />
 
-        {/* 4 — Snippets */}
-        <div className="journey-col">
-          <div className="col-head">Snippets</div>
-          {!activeSrc && <p className="hint">Pick a source.</p>}
-          {activeSrc && insideSnippets.length === 0 && <p className="hint">No snippets yet.</p>}
-          {(() => {
-            const focusedQ = focus?.kind === 'question';
-            // When a question is focused, put the snippets that RELATE to it first.
-            const ordered = focusedQ
-              ? [...insideSnippets].sort((a, b) => (relOfSnippet(b) ? 1 : 0) - (relOfSnippet(a) ? 1 : 0))
-              : insideSnippets;
-            return ordered.map((s) => {
-              const rel = relOfSnippet(s);
-              const cls = ['col-row', focus?.id === s.id ? 'on' : '', rel ? `rel-${rel}` : ''].filter(Boolean).join(' ');
-              return (
-                <button key={s.id} className={cls} onClick={() => setFocus({ kind: 'snippet', id: s.id })} onDoubleClick={() => onOpenInLibrary(s.id)}>
-                  <span className="col-row-title snippet-cell">
-                    <span style={{ color: 'var(--k-snippet)' }}><Icon name="snippet" size={13} /></span>
-                    <span className="snippet-cell-body"><SnippetText text={s.text} images="inline" /></span>
-                    {rel === 'raised' && <span className="rel-badge raised">raises ↑</span>}
-                    {rel === 'answered' && <span className="rel-badge answered">answers ✓</span>}
-                  </span>
-                  <span className="col-row-meta">
-                    {s.sentiment && <SentimentTag token={s.sentiment} />}
-                    {s.raises.length > 0 && <span> · raises {s.raises.length}</span>}
-                  </span>
-                </button>
-              );
-            });
-          })()}
-          {edit && activeSrc && <AddBox label="add snippet" fields={[{ key: 'text', placeholder: 'Paste a passage…', textarea: true }]} onSubmit={(v) => addSnippet(v.text ?? '')} />}
-        </div>
+        <SnippetsColumn
+          activeSrc={activeSrc}
+          insideSnippets={insideSnippets}
+          relOfSnippet={relOfSnippet}
+          focus={focus}
+          setFocus={setFocus}
+          edit={edit}
+          addSnippet={addSnippet}
+          onOpenInLibrary={onOpenInLibrary}
+        />
       </div>
     </div>
   );
 }
 
-const trunc = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}…` : s);
 
 
 
-function AddBox({
-  label,
-  fields,
-  onSubmit,
-}: {
-  label: string;
-  fields: { key: string; placeholder: string; textarea?: boolean }[];
-  onSubmit: (values: Record<string, string>) => void | Promise<void>;
-}) {
-  const [open, setOpen] = useState(false);
-  const [values, setValues] = useState<Record<string, string>>({});
-  const [busy, setBusy] = useState(false);
-
-  const submit = async () => {
-    if (fields.every((f) => !(values[f.key] ?? '').trim())) return;
-    setBusy(true);
-    try {
-      await onSubmit(values);
-      setValues({});
-      setOpen(false);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (!open) return <button className="add-box" onClick={() => setOpen(true)}>+ {label}</button>;
-  return (
-    <div className="add-box open">
-      {fields.map((f) =>
-        f.textarea ? (
-          <textarea key={f.key} value={values[f.key] ?? ''} placeholder={f.placeholder} rows={3} onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))} />
-        ) : (
-          <input
-            key={f.key}
-            value={values[f.key] ?? ''}
-            placeholder={f.placeholder}
-            onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
-            onKeyDown={(e) => e.key === 'Enter' && void submit()}
-          />
-        ),
-      )}
-      <div className="add-actions">
-        <button className="action" disabled={busy} onClick={() => void submit()}>Add</button>
-        <button className="link" disabled={busy} onClick={() => setOpen(false)}>cancel</button>
-      </div>
-    </div>
-  );
-}

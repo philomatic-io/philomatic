@@ -8,7 +8,7 @@ import { Star } from '@phosphor-icons/react';
 import type { EngineClient } from '../client/transport';
 import { relationWord } from '../lib/relations';
 import { ABOUT_TAGS, relationEdge, resolveOrCreateConcept } from '../lib/concepts';
-import { TagEditor } from './Detail';
+import { TagEditor } from './detail/TagEditor';
 import type { NodeKind, Relation, Snapshot } from '../client/types';
 import { Icon, sourceIcon } from '../components/Icon';
 import { FRAMEWORKS } from '../generated/framework';
@@ -144,7 +144,7 @@ export function ConceptDetail({
         {concept.tracked && <span style={{ color: 'var(--accent-soft)' }}>following ★</span>}
       </div>
       <h2>{concept.name}</h2>
-      <TagEditor id={concept.id} tags={concept.tags} client={client} refresh={refresh} notify={notify} />
+      <TagEditor id={concept.id} tags={concept.tags} />
       {concept.tracked && (
         <p className="detail-field" style={{ marginTop: '-0.2rem' }}>
           <Star size={13} weight="fill" style={{ color: 'var(--accent-soft)' }} /> you follow this concept

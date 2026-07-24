@@ -11,13 +11,14 @@ import type { AssembleResult, GraphEnvelope, QuestionView, Snapshot } from './cl
 import { allConcepts, allTags, buildItems, filterItems, railCounts, type Item, type ItemKind } from './lib/items';
 import { Rail } from './views/Rail';
 import { ItemList } from './views/ItemList';
-import { Detail } from './views/Detail';
+import { Detail } from './views/detail';
 import { DraftForm } from './views/DraftForm';
 import { ConceptDetail } from './views/ConceptDetail';
 import { MapView } from './views/MapView';
 import { GraphView } from './views/GraphView';
-import { Journey } from './views/Journey';
+import { Journey } from './views/journey';
 import { Resizer } from './components/Resizer';
+import { EngineProvider, type Engine } from './engine-context';
 
 // Demo mode (2026-07-19): the demo entry injects an in-browser client + change source before
 // rendering; the normal entry gets the HTTP transport. One workbench, two engines.
@@ -308,26 +309,33 @@ export function App() {
     .filter(Boolean)
     .join(' · ');
 
+  // The engine seam (maintainability plan phase 1): provided ONCE here instead of drilled
+  // through every view's props. Views take it with useEngine(); writes go through useAction().
+  const engine: Engine = useMemo(() => ({ client, refresh, notify, pushUndo, epoch }), [refresh, notify, pushUndo, epoch]);
+
   // Chromeless embed (an iframe inside Obsidian, /pm-embed-map): just the Map, scoped to the
   // note's referenced ids. All hooks above have run — this is a render fork, not a hook fork.
   if (isEmbed) {
     return (
-      <div className="app embed" style={{ height: '100vh', display: 'flex' }}>
-        <MapView
-          client={client}
-          epoch={epoch}
-          idFilter={mapIdFilter ?? []}
-          selectedTags={selectedTags}
-          selectedConcepts={selectedConcepts}
-          selectedId={selectedId}
-          focus={mapFocus}
-          onSelect={navigate}
-        />
-      </div>
+      <EngineProvider value={engine}>
+        <div className="app embed" style={{ height: '100vh', display: 'flex' }}>
+          <MapView
+            client={client}
+            epoch={epoch}
+            idFilter={mapIdFilter ?? []}
+            selectedTags={selectedTags}
+            selectedConcepts={selectedConcepts}
+            selectedId={selectedId}
+            focus={mapFocus}
+            onSelect={navigate}
+          />
+        </div>
+      </EngineProvider>
     );
   }
 
   return (
+    <EngineProvider value={engine}>
     <div className="app">
       {IS_DEMO && (
         <div className="demo-banner">
@@ -418,10 +426,6 @@ export function App() {
           snapshot={snapshot}
           questions={questions}
           concepts={conceptList}
-          client={client}
-          refresh={refresh}
-          notify={(m) => notify(m)}
-          pushUndo={pushUndo}
           onOpenInLibrary={(id) => {
             setSelectedId(id);
             setTab('Library');
@@ -522,21 +526,13 @@ export function App() {
               snapshot={snapshot}
               questions={questions}
               concepts={conceptList}
-              pushUndo={pushUndo}
-              client={client}
-              epoch={epoch}
-              refresh={refresh}
               onNavigate={navigate}
               onViewInMap={viewInMap}
-              notify={notify}
             />
           ) : draftKind ? (
             <DraftForm
               kind={draftKind}
-              client={client}
               snapshot={snapshot}
-              refresh={refresh}
-              notify={notify}
               onCreated={(id) => {
                 pushUndo(`create ${draftKind}`, () => client.remove(id));
                 setDraftKind(undefined);
@@ -563,5 +559,6 @@ export function App() {
         </div>
       )}
     </div>
+    </EngineProvider>
   );
 }
