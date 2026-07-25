@@ -1,0 +1,94 @@
+{
+  "framework": "hermeneutics",
+  "version": 1,
+  "description": "Interpretive structure over texts — for readers of the Classics, scripture, law, or any corpus where the work is deciding what a passage MEANS. Passages (snippets) carry readings: a commentary passage #Interprets a primary passage; rival readings each #Interprets the same target and argue among themselves with argument-diagramming's #Supports/#Opposes (frameworks compose — a reading is just a passage, so the whole argument toolkit applies to interpretive disputes). #Tension keeps an apparent conflict between passages ON the record without resolving it — resolution, if any, is a reading that #Interprets each side. Work-level relations (a commentary on a work, a translation of a work) ride source↔source LINKs. The fourfold sense (quadriga) is a LEARNER-overlay metadata vocabulary on ANNOTATES — which sense a reading operates in is your judgment about your reading, not a fact about the text (D8: overlay edges only).",
+  "edgeTags": [
+    {
+      "name": "Interprets",
+      "on": {
+        "type": "LINK",
+        "srcKind": "snippet",
+        "dstKind": "snippet"
+      },
+      "direction": "directed",
+      "inverseLabel": "interpreted by",
+      "description": "this passage offers a reading of that one — what it takes the target to mean. Rival readings each carry their own #Interprets edge; their dispute is #Supports/#Opposes between the readings"
+    },
+    {
+      "name": "ParallelPassage",
+      "on": {
+        "type": "LINK",
+        "srcKind": "snippet",
+        "dstKind": "snippet"
+      },
+      "direction": "symmetric",
+      "description": "these passages tell the same episode or teaching in different places — synoptic parallels, doublets, recensions"
+    },
+    {
+      "name": "Alludes",
+      "on": {
+        "type": "LINK",
+        "srcKind": "snippet",
+        "dstKind": "snippet"
+      },
+      "direction": "directed",
+      "inverseLabel": "alluded to by",
+      "description": "this passage echoes or evokes that one — intertextual reference the author expects the reader to hear"
+    },
+    {
+      "name": "TypeOf",
+      "on": {
+        "type": "LINK",
+        "srcKind": "snippet",
+        "dstKind": "snippet"
+      },
+      "direction": "directed",
+      "inverseLabel": "antitype of",
+      "description": "typological reading: this passage prefigures that one (the type points to the antitype). A hermeneutic CLAIM by the tagger, not a property of the text"
+    },
+    {
+      "name": "Tension",
+      "on": {
+        "type": "LINK",
+        "srcKind": "snippet",
+        "dstKind": "snippet"
+      },
+      "direction": "symmetric",
+      "description": "these passages appear to conflict — kept on the record, not resolved; a harmonizing reading #Interprets each side"
+    },
+    {
+      "name": "CommentaryOn",
+      "on": {
+        "type": "LINK",
+        "srcKind": "source",
+        "dstKind": "source"
+      },
+      "direction": "directed",
+      "inverseLabel": "commented on by",
+      "description": "this work is a sustained commentary on that one"
+    },
+    {
+      "name": "TranslationOf",
+      "on": {
+        "type": "LINK",
+        "srcKind": "source",
+        "dstKind": "source"
+      },
+      "direction": "directed",
+      "inverseLabel": "translated as",
+      "description": "this work renders that one in another language — sharper than core's #DerivativeOf when the tradition of translation is itself the object of study"
+    }
+  ],
+  "metadataFields": [
+    {
+      "name": "sense",
+      "on": { "type": "ANNOTATES" },
+      "vocabulary": [
+        { "token": "literal", "label": "literal / historical" },
+        { "token": "allegorical", "label": "allegorical" },
+        { "token": "tropological", "label": "tropological / moral" },
+        { "token": "anagogical", "label": "anagogical" }
+      ]
+    }
+  ]
+}

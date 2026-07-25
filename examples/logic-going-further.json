@@ -1,0 +1,207 @@
+{
+  "version": 2,
+  "concepts": [
+    {
+      "name": "Algebra for Logic",
+      "description": "Boolean and Heyting algebras and abstract algebraic logic; the algebraic counterparts of classical and intuitionistic logic (Smith §12.1).",
+      "aliases": ["Boolean and Heyting Algebras", "Algebraic Logic"],
+      "tags": ["#difficulty:3"]
+    },
+    {
+      "name": "Boolean Algebras",
+      "description": "The algebra of classical logic: lattices, Boolean operations, and the structures behind truth-functional semantics — also the engine of Boolean-valued models in set-theoretic independence arguments (Smith §12.1).",
+      "tags": ["#difficulty:2"],
+      "prerequisites": ["Algebra for Logic"]
+    },
+    {
+      "name": "Heyting Algebras",
+      "description": "Pseudo-Boolean algebras: the algebraic counterpart of intuitionistic logic, connected to Kripke's relational semantics (Smith §12.1).",
+      "aliases": ["Pseudo-Boolean Algebras"],
+      "tags": ["#difficulty:3"],
+      "prerequisites": ["Boolean Algebras"]
+    },
+    {
+      "name": "Abstract Algebraic Logic",
+      "description": "When does a propositional logic have a well-behaved algebraic counterpart? The general theory behind the classical–Boolean and intuitionistic–Heyting pairings (Smith §12.1).",
+      "tags": ["#difficulty:3"],
+      "prerequisites": ["Boolean Algebras", "Heyting Algebras"]
+    },
+    {
+      "name": "Model Theory",
+      "description": "The study of structures satisfying first-order theories: compactness, ultraproducts, and stability (Smith §12.2).",
+      "tags": ["#difficulty:3"],
+      "prerequisites": ["Algebra for Logic"]
+    },
+    {
+      "name": "Ultraproducts",
+      "description": "The ultraproduct construction: building new models from families of structures, yielding compactness and transfer arguments (Smith §12.2).",
+      "tags": ["#difficulty:3"],
+      "prerequisites": ["Model Theory"]
+    },
+    {
+      "name": "Stability Theory",
+      "description": "Classification-theoretic model theory: stable theories and the modern program descending from Morley and Shelah (Smith §12.2).",
+      "tags": ["#difficulty:4"],
+      "prerequisites": ["Model Theory"]
+    },
+    {
+      "name": "Set Theory",
+      "description": "Mainstream ZFC beyond the basics: large cardinals, constructibility, and Cohen's forcing / independence proofs (Smith §12.4).",
+      "tags": ["#difficulty:4"],
+      "prerequisites": ["Algebra for Logic"]
+    },
+    {
+      "name": "Large Cardinals",
+      "description": "Strong axioms of infinity: the hierarchy of large cardinal hypotheses reaching beyond ZFC (Smith §12.4).",
+      "tags": ["#difficulty:4"],
+      "prerequisites": ["Set Theory"]
+    },
+    {
+      "name": "Forcing and Independence Proofs",
+      "description": "Godel's constructible universe and Cohen's forcing: proving statements like the Continuum Hypothesis independent of ZFC — with Boolean-valued models as an algebraic route in (Smith §12.4).",
+      "aliases": ["Forcing"],
+      "tags": ["#difficulty:4"],
+      "prerequisites": ["Set Theory", "Boolean Algebras"]
+    },
+    {
+      "name": "Formal Arithmetic and Computability",
+      "description": "Models of Peano Arithmetic, Godelian incompleteness, recursion theory, and computational complexity (Smith §12.3).",
+      "aliases": ["Incompleteness and Computability"],
+      "tags": ["#difficulty:4"],
+      "prerequisites": ["Model Theory"]
+    },
+    {
+      "name": "Nonstandard Models of Arithmetic",
+      "description": "First-order PA's uncountably many non-isomorphic models, what they reveal about what PA can and can't prove, and non-Godelian examples of incompleteness (Smith §12.3).",
+      "aliases": ["Models of Peano Arithmetic"],
+      "tags": ["#difficulty:4"],
+      "prerequisites": ["Formal Arithmetic and Computability"]
+    },
+    {
+      "name": "Godelian Incompleteness",
+      "description": "The incompleteness theorems and the diagonalization and self-reference underlying them — including abstract routes via hereditarily finite sets (Smith §12.3).",
+      "aliases": ["The Incompleteness Theorems"],
+      "tags": ["#difficulty:3"],
+      "prerequisites": ["Formal Arithmetic and Computability"]
+    },
+    {
+      "name": "Recursion Theory",
+      "description": "Recursive function theory: the classical theory of effective computability, undecidability, and degrees (Smith §12.3).",
+      "aliases": ["Computability Theory"],
+      "tags": ["#difficulty:3"],
+      "prerequisites": ["Formal Arithmetic and Computability"]
+    },
+    {
+      "name": "Computational Complexity",
+      "description": "Feasible computation: P, NP, and the resource-bounded refinement of computability theory (Smith §12.3).",
+      "tags": ["#difficulty:3"],
+      "prerequisites": ["Recursion Theory"]
+    },
+    {
+      "name": "The Axiom of Choice",
+      "description": "The status and consequences of AC, and the wider question of which set theory to adopt: NBG, SP, NF, ZFA (Smith §12.5).",
+      "aliases": ["Choice and the Choice of Set Theory"],
+      "tags": ["#difficulty:3"],
+      "prerequisites": ["Set Theory"]
+    },
+    {
+      "name": "Alternative Set Theories",
+      "description": "Set theories beyond ZFC — NBG's classes, Scott–Potter's levels, Quine's NF, anti-foundation — and how to choose between them (Smith §12.5).",
+      "tags": ["#difficulty:3"],
+      "prerequisites": ["The Axiom of Choice"]
+    },
+    {
+      "name": "Proof Theory",
+      "description": "Substructural logics, ordinal analysis, and the proof-theoretic strength of arithmetic (Smith §12.6).",
+      "tags": ["#difficulty:4"],
+      "prerequisites": ["Formal Arithmetic and Computability"]
+    },
+    {
+      "name": "Substructural Logics",
+      "description": "Logics from varying the structural rules (weakening, contraction): relevance, linear, and other substructural systems (Smith §12.6).",
+      "tags": ["#difficulty:3"],
+      "prerequisites": ["Proof Theory"]
+    },
+    {
+      "name": "Ordinal Analysis",
+      "description": "Gentzen's consistency proof for PA via induction to epsilon-0, generalized: measuring a theory's strength by the transfinite induction its consistency proof requires (Smith §12.6).",
+      "tags": ["#difficulty:4"],
+      "prerequisites": ["Proof Theory", "Godelian Incompleteness"]
+    },
+    {
+      "name": "Type Theory and the Lambda Calculus",
+      "description": "Higher-order logic, simple type theory, the Curry-Howard correspondence, and homotopy type theory as a foundation (Smith §12.7).",
+      "aliases": ["Higher-Order Logic and Type Theory"],
+      "tags": ["#difficulty:4"],
+      "prerequisites": ["Set Theory", "Formal Arithmetic and Computability"]
+    },
+    {
+      "name": "The Lambda Calculus",
+      "description": "Untyped and simply typed lambda calculus: the calculus of functions underlying type theory and functional computation (Smith §12.7).",
+      "tags": ["#difficulty:2"],
+      "prerequisites": ["Type Theory and the Lambda Calculus"]
+    },
+    {
+      "name": "The Curry-Howard Correspondence",
+      "description": "Propositions-as-types: proofs as programs, implication as function type — the bridge between proof theory and typed lambda calculi, rooted in the intuitionistic BHK reading (Smith §12.7).",
+      "aliases": ["Propositions as Types"],
+      "tags": ["#difficulty:3"],
+      "prerequisites": ["The Lambda Calculus", "Heyting Algebras"]
+    },
+    {
+      "name": "Homotopy Type Theory",
+      "description": "Univalent foundations: type theory enriched with homotopy-theoretic ideas, advertised as a new foundation for mathematics (Smith §12.7).",
+      "aliases": ["Univalent Foundations"],
+      "tags": ["#difficulty:4"],
+      "prerequisites": ["The Curry-Howard Correspondence"]
+    }
+  ],
+  "sources": [
+    { "title": "Mathematical Methods in Linguistics", "author": "Partee, ter Meulen & Wall", "directUrl": "https://link.springer.com/book/10.1007/978-94-009-2213-6", "modality": "text", "tags": ["#difficulty:2", "#beginner"], "explains": ["Boolean Algebras", "Heyting Algebras"] },
+    { "title": "Introduction to Boolean Algebras", "author": "Givant & Halmos", "directUrl": "https://link.springer.com/book/10.1007/978-0-387-68436-9", "modality": "text", "tags": ["#difficulty:3"], "explains": ["Boolean Algebras"], "readsAfter": ["Lectures on the Curry-Howard Isomorphism"] },
+    { "title": "Mathematical Logic: A Course with Exercises, Part I", "author": "Cori & Lascar", "modality": "text", "tags": ["#difficulty:3"], "explains": ["Boolean Algebras"], "readsAfter": ["Introduction to Boolean Algebras"] },
+    { "title": "Abstract Algebraic Logic: An Introductory Textbook", "author": "Josep Maria Font", "directUrl": "https://www.collegepublications.co.uk/logic/mlf/?00026", "modality": "text", "tags": ["#difficulty:3"], "explains": ["Abstract Algebraic Logic"], "readsAfter": ["Mathematical Logic: A Course with Exercises, Part I"] },
+
+    { "title": "Model Theory", "author": "Chang & Keisler", "directUrl": "https://www.sciencedirect.com/book/9780444880543/model-theory", "modality": "text", "tags": ["#difficulty:3"], "explains": ["Model Theory", "Ultraproducts"] },
+    { "title": "A Shorter Model Theory", "author": "Wilfrid Hodges", "directUrl": "https://www.cambridge.org/as/universitypress/subjects/mathematics/logic-categories-and-sets/shorter-model-theory?format=PB", "modality": "text", "tags": ["#difficulty:3"], "explains": ["Model Theory"], "readsAfter": ["Model Theory"] },
+    { "title": "Model Theory: An Introduction", "author": "David Marker", "directUrl": "https://link.springer.com/book/10.1007/b98860", "modality": "text", "tags": ["#difficulty:4"], "explains": ["Model Theory"], "readsAfter": ["A Shorter Model Theory"] },
+    { "title": "A Course in Model Theory", "author": "Tent & Ziegler", "directUrl": "https://www.cambridge.org/core/books/course-in-model-theory/7A4C7BCF0F243AE31C0923A021A06066", "modality": "text", "tags": ["#difficulty:4"], "explains": ["Stability Theory"], "readsAfter": ["Model Theory: An Introduction"] },
+
+    { "title": "Models of Peano Arithmetic", "author": "Richard Kaye", "directUrl": "https://global.oup.com/academic/product/models-of-peano-arithmetic-9780198532132?lang=en&cc=de", "modality": "text", "tags": ["#difficulty:4"], "explains": ["Nonstandard Models of Arithmetic"] },
+    { "title": "Godel's Incompleteness Theorems", "author": "Raymond Smullyan", "directUrl": "https://global.oup.com/academic/product/godels-incompleteness-theorems-9780195046724", "modality": "text", "tags": ["#difficulty:3"], "explains": ["Godelian Incompleteness"], "readsAfter": ["Models of Peano Arithmetic"] },
+    { "title": "Computability: An Introduction to Recursive Function Theory", "author": "Nigel Cutland", "directUrl": "https://poincare.matf.bg.ac.rs/~zarkom/Book_Math__Cutland_Computability.pdf", "modality": "text", "tags": ["#difficulty:3"], "explains": ["Recursion Theory"], "readsAfter": ["Godel's Incompleteness Theorems"] },
+    { "title": "Introduction to the Theory of Computation", "author": "Michael Sipser", "directUrl": "https://www.cengage.com/c/introduction-to-the-theory-of-computation-3e-sipser/9781133187790/", "modality": "text", "tags": ["#difficulty:3"], "explains": ["Recursion Theory", "Computational Complexity"], "readsAfter": ["Computability: An Introduction to Recursive Function Theory"] },
+
+    { "title": "Set Theory: The Third Millennium Edition", "author": "Thomas Jech", "directUrl": "https://link.springer.com/book/10.1007/3-540-44761-X", "modality": "text", "tags": ["#difficulty:4"], "explains": ["Set Theory", "Large Cardinals", "Forcing and Independence Proofs"] },
+    { "title": "Set Theory: An Introduction to Independence Proofs", "author": "Kenneth Kunen", "directUrl": "https://www.sciencedirect.com/bookseries/studies-in-logic-and-the-foundations-of-mathematics/vol/102/suppl/C", "modality": "text", "tags": ["#difficulty:4"], "explains": ["Forcing and Independence Proofs"], "readsAfter": ["Set Theory: The Third Millennium Edition"] },
+    { "title": "The Higher Infinite", "author": "Akihiro Kanamori", "directUrl": "https://link.springer.com/book/10.1007/978-3-540-88867-3", "modality": "text", "tags": ["#difficulty:4"], "explains": ["Large Cardinals"], "readsAfter": ["Set Theory: An Introduction to Independence Proofs"] },
+
+    { "title": "The Axiom of Choice", "author": "Thomas Jech", "directUrl": "https://store.doverpublications.com/products/9780486466248", "modality": "text", "tags": ["#difficulty:3"], "explains": ["The Axiom of Choice", "Forcing and Independence Proofs"], "readsAfter": ["Axiom of Choice"] },
+    { "title": "Axiom of Choice", "author": "Horst Herrlich", "directUrl": "https://link.springer.com/book/10.1007/11601562", "modality": "text", "tags": ["#difficulty:3"], "explains": ["The Axiom of Choice"] },
+    { "title": "Set Theory and Its Philosophy", "author": "Michael Potter", "directUrl": "https://global.oup.com/academic/product/set-theory-and-its-philosophy-9780199270415", "modality": "text", "tags": ["#difficulty:3"], "explains": ["The Axiom of Choice", "Alternative Set Theories"], "readsAfter": ["The Axiom of Choice"] },
+
+    { "title": "Handbook of Proof Theory", "author": "Samuel R. Buss (ed.)", "directUrl": "https://www.sciencedirect.com/book/9780444898401/handbook-of-proof-theory", "modality": "text", "tags": ["#difficulty:4"], "explains": ["Proof Theory"] },
+    { "title": "An Introduction to Substructural Logics", "author": "Greg Restall", "directUrl": "https://www.routledge.com/An-Introduction-to-Substructural-Logics/Restall/p/book/9780415215343", "modality": "text", "tags": ["#difficulty:3"], "explains": ["Proof Theory", "Substructural Logics"], "readsAfter": ["Handbook of Proof Theory"] },
+    { "title": "Proof Theory: The First Step into Impredicativity", "author": "Wolfram Pohlers", "directUrl": "https://link.springer.com/book/10.1007/978-3-540-69319-2", "modality": "text", "tags": ["#difficulty:4"], "explains": ["Ordinal Analysis"], "readsAfter": ["An Introduction to Substructural Logics"] },
+
+    { "title": "An Introduction to Lambda Calculus for Computer Scientists", "author": "Chris Hankin", "directUrl": "https://www.collegepublications.co.uk/computing/?00000", "modality": "text", "tags": ["#difficulty:2"], "explains": ["The Lambda Calculus"] },
+    { "title": "Lectures on the Curry-Howard Isomorphism", "author": "Sorensen & Urzyczyn", "directUrl": "https://www.sciencedirect.com/bookseries/studies-in-logic-and-the-foundations-of-mathematics/vol/149/suppl/C", "modality": "text", "tags": ["#difficulty:3"], "explains": ["The Curry-Howard Correspondence", "Heyting Algebras"], "readsAfter": ["Mathematical Methods in Linguistics", "Types and Programming Languages"] },
+    { "title": "Types and Programming Languages", "author": "Benjamin C. Pierce", "directUrl": "https://mitpress.mit.edu/9780262162098/types-and-programming-languages/", "modality": "text", "tags": ["#difficulty:3"], "explains": ["Type Theory and the Lambda Calculus", "The Lambda Calculus"], "readsAfter": ["An Introduction to Lambda Calculus for Computer Scientists"] },
+    { "title": "Homotopy Type Theory: Univalent Foundations of Mathematics", "author": "The Univalent Foundations Program", "directUrl": "https://homotopytypetheory.org/book/", "modality": "text", "tags": ["#difficulty:4"], "explains": ["Homotopy Type Theory"], "readsAfter": ["Lectures on the Curry-Howard Isomorphism"] }
+  ],
+  "tracks": [
+    {
+      "title": "Going Further in Mathematical Logic",
+      "goal": "An advanced-reading roadmap across the subfields of mathematical logic (Peter Smith, Beginning Mathematical Logic, Ch. 12).",
+      "includes": [
+        "Algebra for Logic",
+        "Model Theory",
+        "Set Theory",
+        "Formal Arithmetic and Computability",
+        "The Axiom of Choice",
+        "Proof Theory",
+        "Type Theory and the Lambda Calculus"
+      ]
+    }
+  ]
+}

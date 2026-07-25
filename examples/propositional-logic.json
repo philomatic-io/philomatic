@@ -1,0 +1,107 @@
+{
+  "version": 2,
+
+  "concepts": [
+    {
+      "name": "Propositional Logic",
+      "description": "Modeling claims and the connectives between them — implication, equivalence, negation — without looking inside the claims.",
+      "tags": ["#difficulty:2"]
+    },
+    {
+      "name": "Linked Premises",
+      "description": "Premises that only work together: neither implies the conclusion alone (modeled as an #Implies:key bundle).",
+      "prerequisites": ["Propositional Logic"],
+      "tags": ["#difficulty:2"]
+    },
+    {
+      "name": "Case Analysis",
+      "description": "Proving C from (A or B) by showing each disjunct implies C separately — disjunction needs no special edge, just two #Implies into the same conclusion.",
+      "prerequisites": ["Propositional Logic"],
+      "tags": ["#difficulty:2"]
+    }
+  ],
+
+  "sources": [
+    {
+      "id": "src_forallx",
+      "title": "forall x: Calgary — An Introduction to Formal Logic",
+      "author": "Magnus, Button, et al.",
+      "directUrl": "https://forallx.openlogicproject.org/",
+      "modality": "text",
+      "estimatedDurationMins": 240,
+      "explains": ["Propositional Logic", "Linked Premises", "Case Analysis"],
+      "tags": ["#difficulty:2", "#open-access"]
+    },
+    {
+      "id": "src_epicurus_menoeceus",
+      "title": "Epicurus, Letter to Menoeceus",
+      "author": "Epicurus",
+      "directUrl": "https://classics.mit.edu/Epicurus/menoec.html",
+      "modality": "text",
+      "estimatedDurationMins": 20,
+      "tags": ["#classic", "#public-domain"],
+      "snippets": [
+        {
+          "text": "Death is deprivation of sensation.",
+          "clarifies": ["Linked Premises"],
+          "note": "Premise 1 of the conjoint pair — alone it implies nothing about whether death is bad.",
+          "links": [{ "to": "Death, the most awful of evils, is nothing to us.", "tag": "#Implies:epicurus" }]
+        },
+        {
+          "text": "All good and evil consists in sensation.",
+          "clarifies": ["Linked Premises"],
+          "note": "Premise 2 — only TOGETHER with premise 1 does the conclusion follow, hence the shared #Implies:epicurus bundle key.",
+          "links": [{ "to": "Death, the most awful of evils, is nothing to us.", "tag": "#Implies:epicurus" }]
+        },
+        {
+          "text": "So long as we exist, death is not with us.",
+          "clarifies": ["Case Analysis"],
+          "note": "First horn of the dilemma: you are either alive or dead, and each case alone implies the conclusion — so two BARE #Implies edges, no bundle.",
+          "links": [{ "to": "Death, the most awful of evils, is nothing to us.", "tag": "#Implies" }]
+        },
+        {
+          "text": "When death comes, then we do not exist.",
+          "clarifies": ["Case Analysis"],
+          "note": "Second horn — (alive or dead) implies the conclusion, decomposed as case analysis.",
+          "links": [{ "to": "Death, the most awful of evils, is nothing to us.", "tag": "#Implies" }]
+        },
+        {
+          "text": "Death, the most awful of evils, is nothing to us.",
+          "note": "The conclusion both structures land on: a conjoint bundle AND a case analysis, in one small argument.",
+          "raises": ["Can something be bad for you without ever being experienced by you?"]
+        }
+      ]
+    },
+    {
+      "id": "src_nagel_death",
+      "title": "Thomas Nagel, \"Death\" (Noûs, 1970)",
+      "author": "Thomas Nagel",
+      "directUrl": "https://philpapers.org/rec/NAGD",
+      "modality": "text",
+      "estimatedDurationMins": 40,
+      "tags": ["#difficulty:3"],
+      "snippets": [
+        {
+          "text": "Death is an evil because it deprives us of the goods that continued life would have brought.",
+          "note": "The deprivation account: a direct denial of Epicurus's conclusion — #Negates, not merely #Opposes, because at most one of the two claims can hold.",
+          "links": [{ "to": "Death, the most awful of evils, is nothing to us.", "tag": "#Negates" }],
+          "answers": ["Can something be bad for you without ever being experienced by you?"]
+        }
+      ]
+    }
+  ],
+
+  "syllabi": [
+    {
+      "title": "Modeling Arguments: Propositional Logic",
+      "goal": "Learn the propositional-logic framework by diagramming one classic argument: conjoint premises (#Implies:key), case analysis (two bare #Implies), and negation (#Negates) — all on Epicurus vs Nagel.",
+      "framework": "propositional-logic",
+      "includes": ["Propositional Logic", "Linked Premises", "Case Analysis"],
+      "order": [
+        "forall x: Calgary — An Introduction to Formal Logic",
+        "Epicurus, Letter to Menoeceus",
+        "Thomas Nagel, \"Death\" (Noûs, 1970)"
+      ]
+    }
+  ]
+}

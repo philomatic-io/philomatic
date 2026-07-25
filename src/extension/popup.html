@@ -1,0 +1,865 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      /* Nocturne — the workbench's tokens (ui/src/styles.css), so the popup reads as the same app.
+         Layout follows the "Add Source Dialog" design (claude.ai/design, Learning management
+         interface design project), adapted from a 620px dialog to a 480px popup. The entities
+         are bordered cards (source / snippets); a snippet's question and concept live in nested
+         kind-coloured sub-boxes inside their cards (alpha feedback rounds 4–5). */
+      :root {
+        --bg: #161826;
+        --surface: #232532;
+        --surface-2: #1c1e2b;
+        --text: #e9e9ed;
+        --muted: #9397ab;
+        --faint: #75798c;
+        --accent: #9184d9;
+        --accent-soft: #b5abfc;
+        --accent-bg: #2b2741;
+        --line: #3f424d;
+        --chip-bg: #2b2d3a;
+        --chip-border: #3f424d;
+        --ok: #7fcf9f;
+        --danger: #e07a63;
+        --radius: 8px;
+        /* The workbench's kind colours (ui/src/styles.css) — card labels + connection rows. */
+        --k-track: #d2cefd;
+        --k-concept: #8fd0c4;
+        --k-source: #9184d9;
+        --k-snippet: #e6c47a;
+        --k-question: #e39ca8;
+      }
+      /* The workbench's scrollbars (ui/src/styles.css) — thin, transparent track, pill thumb. */
+      * {
+        scrollbar-width: thin;
+        scrollbar-color: color-mix(in srgb, var(--text) 20%, transparent) transparent;
+      }
+      ::-webkit-scrollbar {
+        width: 9px;
+        height: 9px;
+      }
+      ::-webkit-scrollbar-track,
+      ::-webkit-scrollbar-corner {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: color-mix(in srgb, var(--text) 18%, transparent);
+        border: 2px solid transparent;
+        background-clip: padding-box;
+        border-radius: 999px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: color-mix(in srgb, var(--text) 34%, transparent);
+        background-clip: padding-box;
+      }
+      /* Classes below set display:flex etc., which would silently defeat the hidden attribute
+         (the UA's [hidden]{display:none} loses to any class rule) — every show/hide in this
+         popup toggles `hidden`, so make it always win. */
+      [hidden] {
+        display: none !important;
+      }
+      body {
+        width: 480px;
+        margin: 0;
+        padding: 0;
+        font: 14px/1.5 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+        color: var(--text);
+        background: var(--bg);
+        -webkit-font-smoothing: antialiased;
+      }
+      /* ── Dialog chrome: header / body / footer ── */
+      /* Header and footer pin while the popup scrolls (sticky, opaque, above the cards). */
+      header {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.75rem 0.9rem;
+        border-bottom: 1px solid var(--line);
+        position: sticky;
+        top: 0;
+        background: var(--bg);
+        z-index: 20;
+      }
+      header > .glyph {
+        flex: none;
+        color: var(--accent);
+      }
+      .hgroup {
+        flex: 1;
+        min-width: 0;
+      }
+      h1 {
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin: 0;
+        color: var(--text);
+      }
+      #intoTrack {
+        display: block;
+        font-size: 0.72rem;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #intoTrack b {
+        font-weight: 500;
+        color: var(--accent-soft);
+      }
+      main {
+        padding: 0.8rem 0.9rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.7rem;
+      }
+      footer {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.7rem 0.9rem;
+        border-top: 1px solid var(--line);
+        position: sticky;
+        bottom: 0;
+        background: var(--bg);
+        z-index: 20;
+      }
+      footer .spacer {
+        flex: 1;
+      }
+      /* ── Entity cards ── */
+      .card {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 0.55rem 0.65rem 0.65rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        background: color-mix(in srgb, var(--surface-2) 45%, transparent);
+      }
+      .card-head {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      .card-head .spacer {
+        flex: 1;
+      }
+      .card-kind {
+        font-size: 0.62rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      .card-head > .glyph {
+        flex: none;
+      }
+      .k-source {
+        color: var(--k-source);
+      }
+      .k-snippet {
+        color: var(--k-snippet);
+      }
+      .k-question {
+        color: var(--k-question);
+      }
+      .k-track {
+        color: var(--k-track);
+      }
+      .k-concept {
+        color: var(--k-concept);
+      }
+      /* ── Inputs ── */
+      label {
+        font-size: 0.7rem;
+        color: var(--muted);
+      }
+      .fld {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        min-width: 0;
+      }
+      input,
+      textarea,
+      select {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0.35rem 0.5rem;
+        font: inherit;
+        font-size: 0.86rem;
+        color: var(--text);
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+      }
+      input:focus,
+      textarea:focus,
+      select:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+      textarea {
+        resize: vertical;
+        min-height: 3.2em;
+        font-style: italic;
+      }
+      select {
+        appearance: none;
+        -webkit-appearance: none;
+        cursor: pointer;
+        padding-right: 1.6rem;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%239397ab'%3E%3Cpath d='M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.5rem center;
+        background-size: 11px;
+      }
+      .grid2 {
+        display: grid;
+        grid-template-columns: 1fr 128px;
+        gap: 0.5rem;
+        align-items: end;
+      }
+      #pageUrl {
+        display: block;
+        font-size: 0.72rem;
+        color: var(--faint);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding: 0.3rem 0;
+      }
+      /* ── Buttons ── */
+      button {
+        padding: 0.42rem 0.7rem;
+        font: inherit;
+        font-size: 0.86rem;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: transparent;
+        color: var(--text);
+        cursor: pointer;
+      }
+      button:hover {
+        background: var(--surface);
+      }
+      button.primary {
+        border-color: var(--accent);
+        background: var(--accent-bg);
+        color: var(--accent-soft);
+      }
+      button.primary:hover {
+        background: color-mix(in srgb, var(--accent) 26%, var(--bg));
+      }
+      .icon-btn {
+        border: none;
+        background: none;
+        padding: 0.25rem;
+        line-height: 0;
+        color: var(--muted);
+        border-radius: 6px;
+      }
+      .icon-btn:hover {
+        color: var(--text);
+        background: var(--surface);
+      }
+      .icon-btn.danger:hover {
+        color: var(--danger);
+      }
+      /* The workbench's active Library tab pill (styles.css .tab.active), verbatim. */
+      .tab-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border: none;
+        padding: 0.25rem 0.7rem;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        background: var(--accent-bg);
+        color: var(--text);
+        box-shadow: inset 0 0 0 1px var(--accent);
+        white-space: nowrap;
+      }
+      .tab-btn:hover {
+        background: color-mix(in srgb, var(--accent) 26%, var(--bg));
+      }
+      .ghost-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        align-self: flex-start;
+        border: none;
+        background: none;
+        padding: 0.2rem 0.35rem;
+        font-size: 0.78rem;
+        color: var(--muted);
+        border-radius: 6px;
+      }
+      .ghost-btn:hover {
+        color: var(--text);
+        background: var(--surface);
+      }
+      /* ── Tag chips — the workbench Detail pane's TagEditor (styles.css .detail-tags) ── */
+      .tag-editor {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        align-items: center;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid var(--chip-border);
+        background: var(--chip-bg);
+        border-radius: 999px;
+        padding: 0.08rem 0.5rem;
+        font-size: 0.76rem;
+        color: var(--text);
+        white-space: nowrap;
+        max-width: 100%;
+      }
+      button.chip-x {
+        all: unset;
+        cursor: pointer;
+        margin: 0 -0.15rem 0 0.3rem;
+        padding: 0 0.15rem;
+        color: var(--faint);
+        font-size: 0.95em;
+        line-height: 1;
+        border-radius: 999px;
+      }
+      button.chip-x:hover {
+        color: var(--danger);
+      }
+      input.chip.tag-add {
+        width: 96px;
+        padding: 0.08rem 0.5rem;
+        font-size: 0.76rem;
+        border: 1px dashed var(--chip-border);
+        border-radius: 999px;
+        color: var(--text);
+      }
+      input.chip.tag-add::placeholder {
+        color: var(--muted);
+      }
+      input.chip.tag-add:focus {
+        border-color: var(--accent);
+      }
+      /* ── Icon-labelled fields (icon left, control right) ── */
+      .field {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .field > .glyph {
+        flex: none;
+        color: var(--muted);
+      }
+      .field > .combo {
+        flex: 1;
+        min-width: 0;
+      }
+      /* ── Learning-track combobox (an owned dropdown — a datalist can't be styled) ── */
+      .combo {
+        position: relative;
+      }
+      .combo > input {
+        padding-right: 1.9rem;
+      }
+      .combo-caret {
+        position: absolute;
+        right: 0.35rem;
+        top: 50%;
+        transform: translateY(-50%);
+        border: none;
+        background: none;
+        padding: 0.2rem 0.25rem;
+        line-height: 0;
+        color: var(--muted);
+        cursor: pointer;
+      }
+      .combo-caret:hover {
+        background: none;
+        color: var(--text);
+      }
+      .combo-menu {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        max-height: 176px;
+        overflow-y: auto;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+        z-index: 30; /* floats over the sticky footer */
+      }
+      .combo-menu button {
+        display: block;
+        width: 100%;
+        text-align: left;
+        border: none;
+        border-radius: 0;
+        padding: 0.35rem 0.55rem;
+        font-size: 0.84rem;
+        background: none;
+      }
+      .combo-menu button:hover,
+      .combo-menu button.active {
+        background: var(--accent-bg);
+        color: var(--accent-soft);
+      }
+      /* ── Segmented radio control (the design's .seg) ── */
+      .sub {
+        font-size: 0.7rem;
+        color: var(--faint);
+      }
+      .hint {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin: 0;
+        font-size: 0.7rem;
+        color: var(--muted);
+      }
+      .seg {
+        display: inline-flex;
+        flex: none;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+      .seg-opt {
+        padding: 0.14rem 0.55rem;
+        font-size: 0.74rem;
+        color: var(--muted);
+        cursor: pointer;
+        border-left: 1px solid var(--line);
+        white-space: nowrap;
+      }
+      .seg-opt:first-child {
+        border-left: none;
+      }
+      .seg-opt input {
+        display: none;
+        width: auto;
+      }
+      .seg-opt:has(input:checked) {
+        background: var(--accent-bg);
+        color: var(--accent-soft);
+      }
+      .rel-row {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+      }
+      .rel-row > select {
+        flex: 1;
+        min-width: 0;
+      }
+      /* ── Nested entity sub-boxes (a question or concept living inside a card) ── */
+      .subcard {
+        --kc: var(--line);
+        border: 1px solid color-mix(in srgb, var(--kc) 35%, var(--line));
+        border-radius: var(--radius);
+        background: color-mix(in srgb, var(--kc) 4%, transparent);
+        padding: 0.45rem 0.55rem 0.55rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+      }
+      .subcard.q-box {
+        --kc: var(--k-question);
+      }
+      .subcard.c-box {
+        --kc: var(--k-concept);
+      }
+      /* ── Snippet cards ── */
+      #snippetList {
+        display: flex;
+        flex-direction: column;
+        gap: 0.7rem;
+      }
+      .snip-sub {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .snip-sub > select,
+      .snip-sub > input {
+        flex: 1;
+        min-width: 0;
+      }
+      .snip-sub > input {
+        font-size: 0.8rem;
+      }
+      /* Edge-type pill labelling a snippet's raises/answers rows (same look as the preview). */
+      .rel-tag {
+        flex: none;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 0 0.45rem;
+        font-size: 0.6rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .snip-sub > .sub {
+        white-space: nowrap;
+      }
+      /* ── Edge preview (the design's "Edges to be created") ── */
+      .edges {
+        border: 1px dashed var(--line);
+        border-radius: var(--radius);
+        padding: 0.5rem 0.6rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      .edges-head {
+        font-size: 0.62rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+      .edge {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.74rem;
+        color: var(--muted);
+        min-width: 0;
+      }
+      .edge .rel {
+        flex: none;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 0 0.45rem;
+        font-size: 0.6rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      /* A connection endpoint: the entity's kind glyph + label, styled like the card headers,
+         with the entity's text after a colon where it matters ("question: Why does …"). */
+      .eend {
+        display: inline-flex;
+        align-items: center;
+        min-width: 0;
+      }
+      .eend > .ekind {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        flex: none;
+        font-size: 0.62rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      .eend > .etext {
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #status {
+        font-size: 0.78rem;
+        color: var(--muted);
+        margin: 0;
+        flex: 1;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      footer .spacer {
+        flex: 0 0 0.2rem;
+      }
+      #resizeGrip {
+        cursor: nesw-resize; /* bottom-LEFT corner: the popup anchors right and grows leftward */
+        color: var(--muted);
+        user-select: none;
+        padding-right: 0.2rem;
+        font-size: 0.95rem;
+        touch-action: none;
+      }
+      #resizeGrip:hover {
+        color: var(--text);
+      }
+      #status.ok {
+        color: var(--ok);
+      }
+      #status.err {
+        color: var(--danger);
+      }
+      .sn-img-preview {
+        max-width: 100%;
+        max-height: 160px;
+        object-fit: contain;
+        align-self: flex-start;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        margin-bottom: 0.25rem;
+      }
+      /* Modality icon dropdown (twin of the workbench picker). */
+      .mod-drop {
+        position: relative;
+      }
+      .mod-drop > button {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.35rem 0.5rem;
+        font: inherit;
+        font-size: 0.86rem;
+        color: var(--text);
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        cursor: pointer;
+      }
+      .mod-drop > button:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+      .mod-drop svg {
+        flex: none;
+      }
+      .mod-drop .caret {
+        margin-left: auto;
+        color: var(--muted);
+      }
+      .mod-drop ul {
+        position: absolute;
+        z-index: 40;
+        left: 0;
+        right: 0;
+        margin: 2px 0 0;
+        padding: 3px;
+        list-style: none;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+      }
+      .mod-drop li button {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.3rem 0.45rem;
+        font: inherit;
+        font-size: 0.84rem;
+        color: var(--text);
+        background: none;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-align: left;
+      }
+      .mod-drop li button:hover {
+        background: var(--surface);
+      }
+      .mod-drop li button.on {
+        color: var(--accent-soft);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <!-- Phosphor regular glyphs throughout (the workbench's icon set, inlined — no CDN under MV3 CSP). -->
+      <svg class="glyph" width="18" height="18" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+        <path d="M232,48H160a40,40,0,0,0-32,16A40,40,0,0,0,96,48H24a8,8,0,0,0-8,8V200a8,8,0,0,0,8,8H96a24,24,0,0,1,24,24,8,8,0,0,0,16,0,24,24,0,0,1,24-24h72a8,8,0,0,0,8-8V56A8,8,0,0,0,232,48ZM96,192H32V64H96a24,24,0,0,1,24,24V200A39.81,39.81,0,0,0,96,192Zm128,0H160a39.81,39.81,0,0,0-24,8V88a24,24,0,0,1,24-24h64Z" />
+      </svg>
+      <div class="hgroup">
+        <h1>Add a source</h1>
+        <span id="intoTrack">into <b>your library</b></span>
+      </div>
+      <button id="library" class="tab-btn" type="button" title="Open library">
+        <svg width="15" height="15" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+          <path d="M231.65,194.55,198.46,36.75a16,16,0,0,0-19-12.39L132.65,34.42a16.08,16.08,0,0,0-12.3,19l33.19,157.8A16,16,0,0,0,169.16,224a16.25,16.25,0,0,0,3.38-.36l46.81-10.06A16.09,16.09,0,0,0,231.65,194.55ZM136,50.15c0-.06,0-.09,0-.09l46.8-10,3.33,15.87L139.33,66Zm6.62,31.47,46.82-10.05,3.34,15.9L146,97.53Zm6.64,31.57,46.82-10.06,13.3,63.24-46.82,10.06ZM216,197.94l-46.8,10-3.33-15.87L212.67,182,216,197.85C216,197.91,216,197.94,216,197.94ZM104,32H56A16,16,0,0,0,40,48V208a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V48A16,16,0,0,0,104,32ZM56,48h48V64H56Zm0,32h48v96H56Zm48,128H56V192h48v16Z" />
+        </svg>
+        Open library
+      </button>
+      <button id="closeBtn" class="icon-btn" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+          <path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z" />
+        </svg>
+      </button>
+    </header>
+
+    <main>
+      <!-- ── SOURCE — everything about the page: basics, tags, track, concept relation ── -->
+      <div class="card">
+        <div class="card-head">
+          <svg class="glyph k-source" width="13" height="13" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+            <path d="M232,48H160a40,40,0,0,0-32,16A40,40,0,0,0,96,48H24a8,8,0,0,0-8,8V200a8,8,0,0,0,8,8H96a24,24,0,0,1,24,24,8,8,0,0,0,16,0,24,24,0,0,1,24-24h72a8,8,0,0,0,8-8V56A8,8,0,0,0,232,48ZM96,192H32V64H96a24,24,0,0,1,24,24V200A39.81,39.81,0,0,0,96,192Zm128,0H160a39.81,39.81,0,0,0-24,8V88a24,24,0,0,1,24-24h64Z" />
+          </svg>
+          <span class="card-kind k-source">source</span>
+        </div>
+        <div class="grid2">
+          <div class="fld">
+            <label for="title">Title</label>
+            <input id="title" placeholder="Page title" />
+          </div>
+          <div class="fld">
+            <label for="modality">Modality</label>
+            <select id="modality" hidden>
+              <option value="">auto</option>
+              <option value="text">text</option>
+              <option value="video">video</option>
+              <option value="audio">audio</option>
+              <option value="interactive">interactive</option>
+              <option value="other">other</option>
+            </select>
+            <!-- The icon dropdown (workbench ModalityPicker, vanilla-DOM twin): drives the
+                 hidden select so drafts/save logic stay untouched. -->
+            <div class="mod-drop" id="modalityDrop">
+              <button type="button" id="modalityBtn" aria-haspopup="listbox"></button>
+              <ul id="modalityMenu" role="listbox" hidden></ul>
+            </div>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="fld">
+            <label>URL</label>
+            <span id="pageUrl"></span>
+          </div>
+          <div class="fld">
+            <label for="minutes">Est. minutes</label>
+            <input id="minutes" type="number" min="1" placeholder="90" />
+          </div>
+        </div>
+        <!-- Tags as removable chips + a dashed add-input — the Detail pane's TagEditor look. -->
+        <div class="tag-editor" id="tagEditor">
+          <input id="tags" class="chip tag-add" placeholder="+ tag" aria-label="Add tag" />
+        </div>
+        <!-- Learning track (track = ShareNetwork, the workbench's kind icon) -->
+        <div class="field">
+          <svg class="glyph" width="16" height="16" viewBox="0 0 256 256" fill="currentColor" role="img" aria-label="Learning track">
+            <title>Learning track</title>
+            <path d="M176,160a39.89,39.89,0,0,0-28.62,12.09l-46.1-29.63a39.8,39.8,0,0,0,0-28.92l46.1-29.63a40,40,0,1,0-8.66-13.45l-46.1,29.63a40,40,0,1,0,0,55.82l46.1,29.63A40,40,0,1,0,176,160Zm0-128a24,24,0,1,1-24,24A24,24,0,0,1,176,32ZM64,152a24,24,0,1,1,24-24A24,24,0,0,1,64,152Zm112,72a24,24,0,1,1,24-24A24,24,0,0,1,176,224Z" />
+          </svg>
+          <div class="combo">
+            <input id="track" placeholder="File into a learning track…" autocomplete="off" aria-label="Learning track" />
+            <button id="trackToggle" class="combo-caret" type="button" tabindex="-1" aria-label="Show learning tracks">
+              <svg width="12" height="12" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z" />
+              </svg>
+            </button>
+            <div id="trackMenu" class="combo-menu" hidden></div>
+          </div>
+        </div>
+        <!-- Concept sub-box (hidden until concepts exist in the graph) -->
+        <div id="relBlock" class="subcard c-box" hidden>
+          <div class="card-head">
+            <svg class="glyph k-concept" width="12" height="12" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+              <path d="M235.33,116.72,139.28,20.66a16,16,0,0,0-22.56,0l-96,96.06a16,16,0,0,0,0,22.56l96.05,96.06h0a16,16,0,0,0,22.56,0l96.05-96.06a16,16,0,0,0,0-22.56ZM128,224h0L32,128,128,32,224,128Z" />
+            </svg>
+            <span class="card-kind k-concept">concept</span>
+            <span class="spacer"></span>
+            <span class="sub">how this page touches your concepts</span>
+          </div>
+          <div class="rel-row">
+            <!-- Options built by popup.ts from the core framework's ABOUT tags (F0). -->
+            <span class="seg" id="relSeg"></span>
+            <select id="concept" aria-label="Concept"></select>
+          </div>
+          <p class="hint" id="relHint"></p>
+        </div>
+      </div>
+
+      <!-- ── SNIPPETS — one card per excerpt ── -->
+      <div id="snippetList"></div>
+      <button id="addSnippet" class="ghost-btn" type="button">
+        <svg width="13" height="13" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+          <path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z" />
+        </svg>
+        Add snippet
+      </button>
+      <button id="captureRegion" class="ghost-btn" type="button" title="Screenshot the page and crop — works on PDFs, where text capture can't reach">
+        <svg width="13" height="13" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+          <path d="M232,168a8,8,0,0,1-8,8H184v48a8,8,0,0,1-16,0V176H64a8,8,0,0,1-8-8V88H24a8,8,0,0,1,0-16H56V32a8,8,0,0,1,16,0V160H224A8,8,0,0,1,232,168ZM96,72h64v64a8,8,0,0,0,16,0V64a8,8,0,0,0-8-8H96a8,8,0,0,0,0,16Z" />
+        </svg>
+        Capture region
+      </button>
+
+      <!-- Connections to be made (live preview of the edges this save writes) -->
+      <div class="edges" id="edges" hidden>
+        <span class="edges-head">Connections to be made</span>
+        <div id="edgeRows" style="display: flex; flex-direction: column; gap: 0.25rem"></div>
+      </div>
+
+    </main>
+
+    <footer>
+      <span id="resizeGrip" title="drag left/down to enlarge (Chrome caps popups at 800×600)">⤢</span>
+      <p id="status">Highlight text on the page first to prefill a snippet.</p>
+      <span class="spacer"></span>
+      <button id="cancel" type="button">Cancel</button>
+      <button id="capture" class="primary" type="button">Save page</button>
+    </footer>
+
+    <!-- One snippet card: excerpt + sentiment + optional concept anchor. Radio-group names are
+         uniqued per instance by popup.ts. -->
+    <template id="snipTpl">
+      <div class="card">
+        <div class="card-head">
+          <svg class="glyph k-snippet" width="13" height="13" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+            <path d="M100,56H40A16,16,0,0,0,24,72v64a16,16,0,0,0,16,16h60v8a32,32,0,0,1-32,32,8,8,0,0,0,0,16,48.05,48.05,0,0,0,48-48V72A16,16,0,0,0,100,56Zm0,80H40V72h60ZM216,56H156a16,16,0,0,0-16,16v64a16,16,0,0,0,16,16h60v8a32,32,0,0,1-32,32,8,8,0,0,0,0,16,48.05,48.05,0,0,0,48-48V72A16,16,0,0,0,216,56Zm0,80H156V72h60Z" />
+          </svg>
+          <span class="card-kind k-snippet">snippet</span>
+          <span class="spacer"></span>
+          <button class="icon-btn danger sn-remove" type="button" title="Remove snippet">
+            <svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+              <path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z" />
+            </svg>
+          </button>
+        </div>
+        <textarea class="sn-text" rows="2" placeholder="Paste or type the excerpt…"></textarea>
+        <div class="snip-sub sn-sent">
+          <!-- Options built by popup.ts from the framework's ANNOTATES sentiment vocabulary. -->
+          <span class="seg"></span>
+          <span class="sub">sentiment</span>
+        </div>
+        <!-- Question sub-box — independent rows: a snippet can ANSWER one question and RAISE
+             another in the same save. -->
+        <div class="subcard q-box sn-qbox">
+          <div class="card-head">
+            <svg class="glyph k-question" width="12" height="12" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+              <path d="M140,180a12,12,0,1,1-12-12A12,12,0,0,1,140,180ZM128,72c-22.06,0-40,16.15-40,36v4a8,8,0,0,0,16,0v-4c0-11,10.77-20,24-20s24,9,24,20-10.77,20-24,20a8,8,0,0,0-8,8v8a8,8,0,0,0,16,0v-.72c18.24-3.35,32-17.9,32-35.28C168,88.15,150.06,72,128,72Zm104,56A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z" />
+            </svg>
+            <span class="card-kind k-question">question</span>
+          </div>
+          <div class="snip-sub sn-raise">
+            <span class="rel-tag">raises</span>
+            <input class="sn-question" placeholder="New question this snippet raises…" aria-label="Question this snippet raises" />
+          </div>
+          <div class="snip-sub sn-answers">
+            <span class="rel-tag">answers</span>
+            <select class="sn-answer" aria-label="Open question this snippet answers"></select>
+          </div>
+        </div>
+        <!-- Concept sub-box — how this passage touches a concept. -->
+        <div class="subcard c-box sn-anchor">
+          <div class="card-head">
+            <svg class="glyph k-concept" width="12" height="12" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+              <path d="M235.33,116.72,139.28,20.66a16,16,0,0,0-22.56,0l-96,96.06a16,16,0,0,0,0,22.56l96.05,96.06h0a16,16,0,0,0,22.56,0l96.05-96.06a16,16,0,0,0,0-22.56ZM128,224h0L32,128,128,32,224,128Z" />
+            </svg>
+            <span class="card-kind k-concept">concept</span>
+          </div>
+          <div class="snip-sub">
+            <span class="seg">
+              <label class="seg-opt"><input type="radio" value="CLARIFIES" checked />clarifies</label>
+              <label class="seg-opt"><input type="radio" value="CONTRADICTS" />contradicts</label>
+            </span>
+            <select class="sn-anchor-concept" aria-label="Concept this touches"></select>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <script type="module" src="./popup.ts"></script>
+  </body>
+</html>

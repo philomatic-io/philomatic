@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      /* Nocturne tokens (ui/src/styles.css) — settings read as the same app. */
+      :root {
+        --bg: #161826;
+        --surface: #232532;
+        --surface-2: #1c1e2b;
+        --text: #e9e9ed;
+        --muted: #9397ab;
+        --faint: #75798c;
+        --accent: #9184d9;
+        --accent-soft: #b5abfc;
+        --accent-bg: #2b2741;
+        --line: #3f424d;
+        --ok: #7fcf9f;
+        --danger: #e07a63;
+        --radius: 8px;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      body {
+        width: 420px;
+        margin: 0;
+        padding: 0.9rem;
+        font: 14px/1.5 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+        color: var(--text);
+        background: var(--bg);
+        -webkit-font-smoothing: antialiased;
+      }
+      h1 {
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin: 0 0 0.15rem;
+      }
+      .sub {
+        font-size: 0.74rem;
+        color: var(--faint);
+        margin: 0 0 0.9rem;
+      }
+      label {
+        display: block;
+        font-size: 0.7rem;
+        color: var(--muted);
+        margin: 0.7rem 0 0.15rem;
+      }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0.35rem 0.5rem;
+        font: inherit;
+        font-size: 0.86rem;
+        color: var(--text);
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+      }
+      input:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+      .row {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.9rem;
+      }
+      button {
+        padding: 0.42rem 0.8rem;
+        font: inherit;
+        font-size: 0.86rem;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: transparent;
+        color: var(--text);
+        cursor: pointer;
+      }
+      button:hover {
+        background: var(--surface);
+      }
+      button.primary {
+        border-color: var(--accent);
+        background: var(--accent-bg);
+        color: var(--accent-soft);
+      }
+      button.primary:hover {
+        background: color-mix(in srgb, var(--accent) 26%, var(--bg));
+      }
+      #status {
+        min-height: 1.2em;
+        font-size: 0.78rem;
+        color: var(--muted);
+        margin: 0.6rem 0 0;
+      }
+      #status.ok {
+        color: var(--ok);
+      }
+      #status.err {
+        color: var(--danger);
+      }
+      .hint {
+        font-size: 0.72rem;
+        color: var(--faint);
+        margin: 0.2rem 0 0;
+      }
+      code {
+        font-size: 0.78em;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 0 0.3rem;
+      }
+      .card {
+        margin-top: 1rem;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 0.6rem 0.7rem 0.7rem;
+        background: color-mix(in srgb, var(--surface-2) 45%, transparent);
+      }
+      .card h2 {
+        margin: 0;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--accent-soft);
+      }
+      #migrateStatus {
+        min-height: 0;
+        font-size: 0.78rem;
+        color: var(--muted);
+        margin: 0.5rem 0 0;
+      }
+      #migrateStatus.ok {
+        color: var(--ok);
+      }
+      #migrateStatus.err {
+        color: var(--danger);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Philomatic settings</h1>
+    <p class="sub">The extension captures into your self-hosted Philomatic server.</p>
+
+    <label for="baseUrl">Server URL</label>
+    <input id="baseUrl" placeholder="http://localhost:4321" autocomplete="off" />
+    <p class="hint">Start it with <code>pnpm serve</code> — the library viewer lives there too.</p>
+
+    <label for="token">Access token <span style="color: var(--faint)">(only if your server sets one)</span></label>
+    <input id="token" placeholder="X-Ingest-Token value" autocomplete="off" />
+
+    <div class="row">
+      <button id="test" type="button">Test connection</button>
+      <button id="save" class="primary" type="button">Save</button>
+    </div>
+    <p id="status"></p>
+
+    <!-- Pre-T2 hand-off: shown only while an old in-browser library sits in chrome.storage. -->
+    <div id="migrate" class="card" hidden>
+      <h2>Old in-browser library found</h2>
+      <p class="hint" style="margin: 0.2rem 0 0.6rem">
+        Earlier versions kept your library inside the extension. Push it to your server (a safe,
+        idempotent merge) — an archived local copy is kept either way.
+      </p>
+      <div class="row" style="margin-top: 0">
+        <button id="pushLegacy" class="primary" type="button">Push to server</button>
+        <button id="archiveLegacy" type="button">Archive without pushing</button>
+      </div>
+      <p id="migrateStatus"></p>
+    </div>
+
+    <script type="module" src="./options.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,139 @@
+{
+  "version": 2,
+
+  "concepts": [
+    {
+      "name": "Creation ex nihilo",
+      "description": "The doctrine that God created from nothing — is it asserted by Genesis 1:1, or read into it?",
+      "tags": ["#difficulty:3"]
+    },
+    {
+      "name": "Logos",
+      "description": "The Word — John's creative principle, heard against Genesis 1's 'and God said'.",
+      "tags": ["#difficulty:3"]
+    },
+    {
+      "name": "The Days of Creation",
+      "description": "What kind of 'day' Genesis 1 counts in — the classic testbed for literal vs non-literal reading.",
+      "tags": ["#difficulty:2"]
+    }
+  ],
+
+  "sources": [
+    {
+      "id": "src_genesis_kjv",
+      "title": "Genesis 1–2 (KJV)",
+      "directUrl": "https://www.gutenberg.org/ebooks/10",
+      "modality": "text",
+      "estimatedDurationMins": 15,
+      "tags": ["#primary-text", "#public-domain"],
+      "snippets": [
+        {
+          "text": "In the beginning God created the heaven and the earth.",
+          "clarifies": ["Creation ex nihilo"],
+          "raises": ["Does Genesis 1:1 assert creation from nothing, or the ordering of pre-existing chaos?"]
+        },
+        {
+          "text": "And the evening and the morning were the first day.",
+          "clarifies": ["The Days of Creation"],
+          "raises": ["Are the days of Genesis 1 twenty-four hours?"]
+        },
+        {
+          "text": "These are the generations of the heavens and of the earth when they were created, in the day that the LORD God made the earth and the heavens.",
+          "note": "Genesis 2:4 compresses the whole creation into 'the day' — singular — where chapter 1 counts seven. The tension is kept on the record, not resolved.",
+          "links": [{ "to": "And the evening and the morning were the first day.", "tag": "#Tension" }]
+        }
+      ]
+    },
+    {
+      "id": "src_john_kjv",
+      "title": "Gospel of John 1 (KJV)",
+      "directUrl": "https://www.gutenberg.org/ebooks/10",
+      "modality": "text",
+      "estimatedDurationMins": 10,
+      "tags": ["#primary-text", "#public-domain"],
+      "snippets": [
+        {
+          "text": "In the beginning was the Word, and the Word was with God, and the Word was God.",
+          "clarifies": ["Logos"],
+          "note": "The opening phrase is Genesis 1:1's — the allusion is the exegesis: John re-reads creation with the Word inside it.",
+          "links": [
+            { "to": "In the beginning God created the heaven and the earth.", "tag": "#Alludes" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "src_basil_hexaemeron",
+      "title": "Basil the Great, Hexaemeron",
+      "author": "Basil of Caesarea",
+      "directUrl": "https://www.newadvent.org/fathers/3201.htm",
+      "modality": "text",
+      "estimatedDurationMins": 120,
+      "tags": ["#commentary", "#patristic"],
+      "snippets": [
+        {
+          "text": "And there was evening and there was morning: one day. Twenty-four hours fill up the space of one day.",
+          "note": "The literal reading: a day is a day. One #Interprets edge onto the target passage; the dispute with Augustine's reading is argument-diagramming's #Opposes — frameworks compose.",
+          "links": [
+            { "to": "And the evening and the morning were the first day.", "tag": "#Interprets" }
+          ],
+          "answers": ["Are the days of Genesis 1 twenty-four hours?"]
+        }
+      ]
+    },
+    {
+      "id": "src_augustine_degenesi",
+      "title": "Augustine, The Literal Meaning of Genesis",
+      "author": "Augustine of Hippo",
+      "directUrl": "https://archive.org/details/AugustineDeGenesiAdLitteram",
+      "modality": "text",
+      "estimatedDurationMins": 300,
+      "tags": ["#commentary", "#patristic"],
+      "snippets": [
+        {
+          "text": "What kind of days these were it is extremely difficult, or perhaps impossible for us to conceive.",
+          "note": "A harmonizing reading interprets BOTH sides of the Genesis 1 vs 2:4 tension — and directly opposes Basil's twenty-four-hour reading.",
+          "links": [
+            { "to": "And the evening and the morning were the first day.", "tag": "#Interprets" },
+            {
+              "to": "These are the generations of the heavens and of the earth when they were created, in the day that the LORD God made the earth and the heavens.",
+              "tag": "#Interprets"
+            },
+            {
+              "to": "And there was evening and there was morning: one day. Twenty-four hours fill up the space of one day.",
+              "tag": "#Opposes"
+            }
+          ],
+          "answers": ["Are the days of Genesis 1 twenty-four hours?"]
+        }
+      ]
+    }
+  ],
+
+  "syllabi": [
+    {
+      "title": "Reading Genesis 1: A Hermeneutics Starter",
+      "goal": "Learn the hermeneutics framework on one chapter: an allusion (John 1), a kept tension (Gen 1 vs 2:4), and two rival readings of 'the first day' (Basil vs Augustine) that dispute via #Opposes.",
+      "framework": "hermeneutics",
+      "includes": ["Creation ex nihilo", "Logos", "The Days of Creation"],
+      "order": [
+        "Genesis 1–2 (KJV)",
+        "Gospel of John 1 (KJV)",
+        "Basil the Great, Hexaemeron",
+        "Augustine, The Literal Meaning of Genesis"
+      ]
+    }
+  ],
+
+  "edges": [
+    {
+      "srcType": "source", "srcId": "src_basil_hexaemeron", "type": "LINK",
+      "dstType": "source", "dstId": "src_genesis_kjv", "tags": [{ "name": "CommentaryOn" }]
+    },
+    {
+      "srcType": "source", "srcId": "src_augustine_degenesi", "type": "LINK",
+      "dstType": "source", "dstId": "src_genesis_kjv", "tags": [{ "name": "CommentaryOn" }]
+    }
+  ]
+}

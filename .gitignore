@@ -1,0 +1,20 @@
+node_modules/
+dist/
+dist-demo/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.DS_Store
+.devcontainer/
+archived/
+dist-extension/
+scratch.md
+
+# Local database (default `.philomatic/philomatic.sqlite`)
+.philomatic/
+
+# Obsidian plugin build output (composed into the vault, not committed)
+obsidian/main.js
+obsidian/data.json
+.philomatic-registry/
+/philomatic-20*.json

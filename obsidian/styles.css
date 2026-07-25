@@ -1,0 +1,355 @@
+/* Philomatic entity chips (plan OB-S3) — the workbench's kind language inside notes.
+   Kind colours are Nocturne's (ui/src/styles.css); readable on light and dark themes via
+   theme-neutral tinting off the kind hue. */
+
+.philomatic-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.05em 0.5em;
+  border-radius: 999px;
+  border: 1px solid var(--pm-kind, var(--background-modifier-border));
+  background: color-mix(in srgb, var(--pm-kind, var(--text-muted)) 12%, transparent);
+  color: var(--pm-kind, var(--text-muted));
+  font-size: 0.88em;
+  line-height: 1.4;
+  cursor: pointer;
+  vertical-align: baseline;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.philomatic-chip:hover {
+  background: color-mix(in srgb, var(--pm-kind, var(--text-muted)) 22%, transparent);
+}
+.philomatic-chip svg {
+  flex: none;
+}
+.philomatic-chip .pm-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-normal);
+}
+
+/* The workbench kind colours. */
+.philomatic-chip.pm-track { --pm-kind: #a89ce8; }
+.philomatic-chip.pm-concept  { --pm-kind: #3fa08e; }
+.philomatic-chip.pm-source   { --pm-kind: #9184d9; }
+.philomatic-chip.pm-snippet  { --pm-kind: #c19a3d; }
+.philomatic-chip.pm-question { --pm-kind: #d16a7c; }
+
+/* Index not loaded yet (server unreachable) vs. loaded-but-missing. */
+.philomatic-chip.pm-pending {
+  border-style: dashed;
+  cursor: default;
+  font-family: var(--font-monospace);
+  font-size: 0.8em;
+}
+.philomatic-chip.pm-unknown {
+  border-style: dashed;
+  opacity: 0.7;
+  font-family: var(--font-monospace);
+  font-size: 0.8em;
+}
+
+/* /pm- slash suggester rows. */
+.pm-suggest-desc {
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
+
+/* The snippet QUOTE CARD — a `pm:snp_…` token standing alone as its paragraph renders as a
+   blockquote-style box: snippet-gold accent bar, the full passage, a source attribution line. */
+.philomatic-card.pm-snippet  { --pm-kind: #c19a3d; }
+.philomatic-card.pm-question { --pm-kind: #d16a7c; }
+.philomatic-card.pm-question .pm-card-text {
+  font-style: normal; /* the learner's own words, not a quotation */
+}
+.philomatic-card {
+  --pm-kind: #c19a3d;
+  display: block;
+  margin: 0.4em 0;
+  padding: 0.55em 0.8em;
+  border: 1px solid color-mix(in srgb, var(--pm-kind) 35%, var(--background-modifier-border));
+  border-left: 3px solid var(--pm-kind);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--pm-kind) 7%, transparent);
+  cursor: pointer;
+}
+.philomatic-card:hover {
+  background: color-mix(in srgb, var(--pm-kind) 14%, transparent);
+}
+.philomatic-card .pm-card-quote {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45em;
+  color: var(--pm-kind);
+}
+.philomatic-card .pm-card-quote svg {
+  flex: none;
+  margin-top: 0.25em;
+}
+.philomatic-card .pm-card-text {
+  color: var(--text-normal);
+  font-style: italic;
+  white-space: pre-wrap;
+}
+.philomatic-card .pm-card-src {
+  margin-top: 0.35em;
+  padding-left: 1.35em;
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
+.philomatic-card.pm-pending,
+.philomatic-card.pm-unknown {
+  border-style: dashed;
+  cursor: default;
+  font-family: var(--font-monospace);
+  font-size: 0.85em;
+  color: var(--text-muted);
+}
+
+/* The Library tab — the workbench iframe fills the view. */
+.philomatic-library {
+  padding: 0;
+}
+.philomatic-library iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+  background: var(--background-primary);
+}
+
+/* Connections on cards ("Always show connections") — the Library detail list's language. */
+.pm-card-conns {
+  margin-top: 0.45em;
+  padding-top: 0.4em;
+  padding-left: 1.35em;
+  border-top: 1px solid color-mix(in srgb, var(--pm-kind) 20%, var(--background-modifier-border));
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+}
+.pm-conn {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  font-size: 0.82em;
+  cursor: pointer;
+  min-width: 0;
+}
+.pm-conn:hover .pm-conn-other {
+  text-decoration: underline;
+}
+.pm-conn-word {
+  flex: none;
+  color: var(--text-muted);
+}
+.pm-conn-other {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pm-conn-other.pm-track { color: #a89ce8; }
+.pm-conn-other.pm-concept  { color: #3fa08e; }
+.pm-conn-other.pm-source   { color: #9184d9; }
+.pm-conn-other.pm-snippet  { color: #c19a3d; }
+.pm-conn-other.pm-question { color: #d16a7c; }
+
+/* The source note's live block — header, meta, and the source's entities as cards. */
+.pm-source-block {
+  border: 1px solid color-mix(in srgb, #9184d9 30%, var(--background-modifier-border));
+  border-radius: 8px;
+  padding: 0.7em 0.9em;
+  background: color-mix(in srgb, #9184d9 5%, transparent);
+}
+.pm-src-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  color: #9184d9;
+  cursor: pointer;
+}
+.pm-src-title {
+  color: var(--text-normal);
+  font-weight: 600;
+  font-size: 1.1em;
+}
+.pm-src-head:hover .pm-src-title {
+  text-decoration: underline;
+}
+.pm-src-meta {
+  margin-top: 0.15em;
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
+.pm-src-url {
+  display: block;
+  margin-top: 0.1em;
+  font-size: 0.8em;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pm-src-section {
+  margin-top: 0.7em;
+  margin-bottom: 0.25em;
+  font-size: 0.72em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.pm-src-missing {
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+  font-size: 0.85em;
+}
+
+/* The scoped Map embed — the workbench's map in a chromeless iframe. */
+.pm-map-embed iframe {
+  width: 100%;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  display: block;
+  background: var(--background-primary);
+}
+
+/* Snippet question ties — raised vs answered, visually distinct. */
+.pm-card-ties {
+  margin-top: 0.4em;
+  padding-left: 1.35em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+}
+.pm-tie {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  font-size: 0.82em;
+  cursor: pointer;
+  min-width: 0;
+}
+.pm-tie-badge {
+  flex: none;
+  border-radius: 999px;
+  padding: 0 0.5em;
+  font-size: 0.85em;
+}
+.pm-tie-raises .pm-tie-badge {
+  color: #d16a7c;
+  background: color-mix(in srgb, #d16a7c 14%, transparent);
+}
+.pm-tie-answers .pm-tie-badge {
+  color: #4caf7d;
+  background: color-mix(in srgb, #4caf7d 14%, transparent);
+}
+.pm-tie-text {
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pm-tie:hover .pm-tie-text {
+  text-decoration: underline;
+}
+
+/* Requisite rows in the source block. */
+.pm-req-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35em;
+  margin-top: 0.45em;
+}
+.pm-req-label {
+  flex: none;
+  font-size: 0.72em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  min-width: 7.5em;
+}
+
+/* Track header blocks share the source-block frame, tinted to the track kind color. */
+.pm-track-block {
+  border-color: color-mix(in srgb, #a89ce8 45%, transparent);
+}
+
+/* Detailed snippet blocks: gold frame, question boxes nested, relations below. */
+.pm-snippet-block {
+  border-color: color-mix(in srgb, #c19a3d 45%, transparent);
+}
+.pm-nested {
+  margin: 0.5em 0 0.5em 1.6em;
+}
+.pm-nested > .pm-tie-badge {
+  display: inline-block;
+  margin-bottom: 0.3em;
+}
+.pm-nested .philomatic-card {
+  display: block;
+}
+
+/* Track block source list: chip + its vault note. */
+.pm-track-sources {
+  margin-top: 0.6em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+}
+.pm-track-src-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  min-width: 0;
+}
+.pm-track-note-label {
+  flex: none;
+  font-size: 0.82em;
+  color: var(--text-muted);
+}
+.pm-track-note-link {
+  font-size: 0.86em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Concept / question detailed blocks: kind-tinted frames. */
+.pm-concept-block {
+  border-color: color-mix(in srgb, #3fa08e 45%, transparent);
+}
+.pm-question-block {
+  border-color: color-mix(in srgb, #d16a7c 45%, transparent);
+}
+
+/* Host-rendered markdown inside snippet cards: keep it inline-flowing and compact. */
+.pm-card-text > p:first-child {
+  margin-top: 0;
+}
+.pm-card-text > p:last-child {
+  margin-bottom: 0;
+}
+
+/* Rendered-markdown cards (pm-card-md): the renderer emits <p> elements with newlines
+   BETWEEN them — under the label span's pre-wrap those newlines double as blank lines on
+   top of the paragraph margins, and MathJax adds its own 1em around display math. Normal
+   whitespace + a tight, uniform rhythm instead. */
+.pm-card-text.pm-card-md {
+  white-space: normal;
+}
+.pm-card-md p {
+  margin: 0 0 0.45em;
+}
+.pm-card-md p:last-child {
+  margin-bottom: 0;
+}
+.pm-card-md mjx-container[display='true'] {
+  margin: 0.45em 0 !important;
+}
+.pm-card-md ul,
+.pm-card-md ol {
+  margin: 0 0 0.45em;
+}

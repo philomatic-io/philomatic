@@ -1,0 +1,32 @@
+{
+  "framework": "argument-diagramming",
+  "version": 1,
+  "description": "Argument structure over passages — the first non-core framework, proving the lens model: snippet↔snippet LINKs tagged with argumentative roles. Corpus-internal argument structure is framework vocabulary (a community's lens), distinct from the engine's polarity primitive (CLARIFIES/CONTRADICTS, which anchor passages to the ontology). LINKED (conjoint) premises use the tag grammar's subtype as a bundle key: #Supports:a edges into the same conclusion are jointly sufficient — neither premise supports alone — while bare #Supports is an independent (convergent) line. Bundles bind to the conclusion through the edges themselves, so a premise can join several arguments without ambiguity; reading a diagram back is a pure fold (group by conclusion + subtype). If argument mapping ever needs reified inference nodes, the promotion path is the deferred Claim/Answer nodes (ROADMAP §2.3). Bundle keys are OPAQUE AND TOOL-MINTED (the id doctrine: humans never hand-derive keys; capture surfaces mint short hashes — mnemonic keys in hand-authored payloads are a conscious choice). No registry, no uniqueness enforcement — collisions are structurally confined to one conclusion's inbound set, and the residue is F1 lint territory: singleton bundles (dangling conjunction / typo'd key), mixed bare+subtyped support on one edge, late/cross-asserter bundle joins.",
+  "edgeTags": [
+    {
+      "name": "Supports",
+      "on": {
+        "type": "LINK",
+        "srcKind": "snippet",
+        "dstKind": "snippet"
+      },
+      "direction": "directed",
+      "inverseLabel": "supported by",
+      "description": "this passage gives evidence or argument FOR that one; a subtype names a conjoint bundle (#Supports:a — jointly sufficient with the bundle's other premises), bare = independent",
+      "subtypeRole": "bundle"
+    },
+    {
+      "name": "Opposes",
+      "on": {
+        "type": "LINK",
+        "srcKind": "snippet",
+        "dstKind": "snippet"
+      },
+      "direction": "directed",
+      "inverseLabel": "opposed by",
+      "description": "this passage argues AGAINST that one — passage-level disagreement, kept, not resolved; subtypes bundle conjoint objections like #Supports",
+      "subtypeRole": "bundle"
+    }
+  ],
+  "metadataFields": []
+}

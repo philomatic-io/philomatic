@@ -1,0 +1,40 @@
+{
+  "framework": "propositional-logic",
+  "version": 1,
+  "description": "Propositional structure over passages — the formal cousin of argument-diagramming: where #Supports says 'this passage gives reason to believe that one', these tags assert logical form. Snippets play propositions; connectives ride tags on snippet↔snippet LINKs. Conjunction reuses the bundle convention (#Implies:a — jointly-sufficient antecedents, same grammar as #Supports:a). Disjunctive antecedents need NO hyperedge: (A ∨ B) → C is exactly {A #Implies C, B #Implies C} — case analysis is two edges, so the one connective that looks like it demands arity 3 decomposes for free. Negation between passages is #Negates (the engine primitive CONTRADICTS anchors a passage to a CONCEPT; passage↔passage contradiction is framework vocabulary). Nothing here EVALUATES: well-formedness lint (a #Negates edge inside an #Implies:a bundle, circular implication chains) is F1 territory; truth-functional checking would be an enrich-side adapter, never an engine feature.",
+  "edgeTags": [
+    {
+      "name": "Implies",
+      "on": {
+        "type": "LINK",
+        "srcKind": "snippet",
+        "dstKind": "snippet"
+      },
+      "direction": "directed",
+      "inverseLabel": "implied by",
+      "description": "if this passage's claim holds, that one follows; a subtype names conjoint antecedents (#Implies:a — jointly sufficient, none implies alone), bare = sufficient on its own. (A ∨ B) → C is two bare edges: case analysis",
+      "subtypeRole": "bundle"
+    },
+    {
+      "name": "EquivalentTo",
+      "on": {
+        "type": "LINK",
+        "srcKind": "snippet",
+        "dstKind": "snippet"
+      },
+      "direction": "symmetric",
+      "description": "these passages assert logically equivalent claims — each implies the other (the biconditional)"
+    },
+    {
+      "name": "Negates",
+      "on": {
+        "type": "LINK",
+        "srcKind": "snippet",
+        "dstKind": "snippet"
+      },
+      "direction": "symmetric",
+      "description": "these passages assert contradictory claims — at most one can hold. Passage-level ¬; distinct from the engine's CONTRADICTS (passage vs concept) and from #Opposes (argues against, weaker than logical contradiction)"
+    }
+  ],
+  "metadataFields": []
+}
