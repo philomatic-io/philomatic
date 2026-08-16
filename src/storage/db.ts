@@ -46,13 +46,40 @@ function ensureTimestampColumns(sqlite: Database.Database): void {
   if (!sylCols.has('origin')) sqlite.exec('ALTER TABLE syllabi ADD COLUMN origin TEXT');
 }
 
-export function openDb(path = ':memory:'): { db: DB; sqlite: SqliteConn } {
+/**
+ * Open the node database. `key` (a raw 32-byte DEK) turns on SQLCipher encryption at rest:
+ * the cipher is pinned explicitly so reads and writes always agree, and the key is applied as
+ * a raw key (`x'…'`, no passphrase KDF) BEFORE any other statement — the order SQLCipher
+ * requires. Keyless opens behave exactly as an unencrypted better-sqlite3 database.
+ */
+export function openDb(path = ':memory:', key?: Buffer): { db: DB; sqlite: SqliteConn } {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
   const sqlite = new Database(path);
+  if (key !== undefined) {
+    if (key.length !== 32) throw new Error('database key must be 32 bytes');
+    sqlite.pragma("cipher='sqlcipher'");
+    sqlite.pragma(`key="x'${key.toString('hex')}'"`);
+  }
   sqlite.pragma('journal_mode = WAL');
   sqlite.pragma('foreign_keys = ON');
   sqlite.exec(DDL);
   ensureTimestampColumns(sqlite);
   const db = drizzle(sqlite, { schema });
   return { db, sqlite };
+}
+
+/**
+ * Encrypt an existing PLAINTEXT database in place with `key`: `pragma rekey` rewrites every page
+ * encrypted (data preserved). For the plaintext→encrypted migration only — a database that is
+ * already encrypted cannot be rekeyed without its current key and must be skipped by the caller.
+ */
+export function rekeyDb(dbPath: string, key: Buffer): void {
+  if (key.length !== 32) throw new Error('database key must be 32 bytes');
+  const sqlite = new Database(dbPath);
+  try {
+    sqlite.pragma("cipher='sqlcipher'");
+    sqlite.pragma(`rekey="x'${key.toString('hex')}'"`);
+  } finally {
+    sqlite.close();
+  }
 }

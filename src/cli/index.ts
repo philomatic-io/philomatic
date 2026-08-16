@@ -50,6 +50,8 @@ Commands:
   push <track> --registry <url>     Publish the track's bundle TO a registry (keypair = identity)
   unpush <track> --registry <url>   Remove it from a registry (signed challenge; copies persist)
   registry [--dir D] [--port N]     Run a track registry (no engine, no learner data — bundles only)
+  migrate-encrypt                   Encrypt a plaintext deployment at rest (needs PHILOMATIC_KEK;
+                                      --data-dir and/or --registry-dir; idempotent; back up first)
   migrate-v2                        Rebuild a pre-v2 store file as model v2 (edge collapse +
                                       author-free source ids). Keeps the old file as .v1-backup.
                                       The server also runs this automatically at boot.
@@ -158,16 +160,53 @@ async function main(): Promise<void> {
     return;
   }
 
+  // Turn a PLAINTEXT deployment into an encrypted one. Needs a KEK (PHILOMATIC_KEK); operates on
+  // a hosted data dir (--data-dir / INGEST_DATA_DIR) and/or a registry dir (--registry-dir /
+  // REGISTRY_DIR). Idempotent — already-encrypted files are skipped. BACK UP FIRST.
+  if (command === 'migrate-encrypt') {
+    const { envKek } = await import('../server/keys');
+    const { encryptLibraries, encryptRegistry } = await import('../server/migrate-encrypt');
+    const kek = envKek();
+    if (kek === undefined) {
+      console.error('migrate-encrypt needs a key: set PHILOMATIC_KEK (base64 of 32 bytes) to the key this deployment will use going forward.');
+      process.exitCode = 1;
+      return;
+    }
+    const dataDir = flagValue(args, '--data-dir') ?? process.env.INGEST_DATA_DIR;
+    const registryDir = flagValue(args, '--registry-dir') ?? process.env.REGISTRY_DIR;
+    if (dataDir === undefined && registryDir === undefined) {
+      console.error('nothing to migrate: pass --data-dir <hosted libraries> and/or --registry-dir <registry>, or set INGEST_DATA_DIR / REGISTRY_DIR.');
+      process.exitCode = 1;
+      return;
+    }
+    console.log('Back up first — this rewrites files in place. Encrypting…\n');
+    if (dataDir !== undefined) {
+      const { encrypted, skipped } = encryptLibraries(dataDir, kek);
+      console.log(`libraries (${dataDir}): ${encrypted.length} encrypted, ${skipped.length} already encrypted`);
+      for (const n of encrypted) console.log(`  + ${n}`);
+    }
+    if (registryDir !== undefined) {
+      const { encrypted, skipped } = encryptRegistry(registryDir, kek);
+      if (skipped) console.log(`registry (${registryDir}): already encrypted (registry.key present) — skipped`);
+      else console.log(`registry (${registryDir}): ${encrypted.length} private file(s) encrypted${encrypted.length ? ` (${encrypted.join(', ')})` : ''}`);
+    }
+    console.log('\nDone. Keep PHILOMATIC_KEK set from now on — the data cannot be read without it.');
+    return;
+  }
+
   // The registry mode needs no engine and no database — it stores bundles only.
   if (command === 'registry') {
     const { createRegistryServer } = await import('../registry/server');
     const port = Number(flagValue(args, '--port') ?? process.env.REGISTRY_PORT ?? 4400);
     const host = flagValue(args, '--host') ?? '0.0.0.0';
     const dir = flagValue(args, '--dir') ?? '.philomatic-registry';
+    // The KEK resolves async when it comes from KMS (one decrypt at boot).
+    const kek = await (await import('../server/kms')).resolveKekFromEnv(dir);
     createRegistryServer({
       dir,
       port,
       host,
+      ...(kek !== undefined ? { kek } : {}),
     }).listen(port, host, () => {
       console.log(`philomatic registry listening on http://${host}:${port}  (dir: ${dir})`);
     });

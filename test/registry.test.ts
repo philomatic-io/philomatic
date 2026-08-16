@@ -12,6 +12,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { PhilomaticEngine } from '../src/engine';
+import { readReg, writeReg } from './registry-file';
 import { createRegistryServer } from '../src/registry/server';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
@@ -138,10 +139,9 @@ describe('track registry', () => {
     a.engine.publish({ ref: 'Fairness 101', license: 'CC-BY-SA-4.0' });
     await post(base, '/publish', a.engine.publication('Fairness 101'));
     // simulate an index from before goals were indexed: strip the goal, reboot the registry on the same dir
-    const indexPath = join(dir, 'index.json');
-    const idx = JSON.parse(readFileSync(indexPath, 'utf8')) as Record<string, { goal?: string }>;
+    const idx = readReg<Record<string, { goal?: string }>>(dir, 'index.json');
     delete idx['syl_fairness-101']!.goal;
-    writeFileSync(indexPath, JSON.stringify(idx));
+    writeReg(dir, 'index.json', idx);
     server?.close();
     server = createRegistryServer({ dir, uiDist: join(dir, 'dist'), now: () => 8_000 });
     await new Promise<void>((resolve) => server!.listen(0, '127.0.0.1', resolve));
@@ -273,5 +273,46 @@ describe('track registry', () => {
     expect(((await res.json()) as { error: string }).error).toMatch(/trackId/);
     // The write that a traversal would have produced: dir/bundles/../../pwned.json === <dir>/../pwned.json
     expect(existsSync(join(dir, '..', 'pwned.json')), 'nothing escaped the data dir').toBe(false);
+  });
+});
+
+describe('encryption at rest — the registry (E-S3)', () => {
+  it('private files are ciphertext, published bundles stay plaintext, and the public index still serves', async () => {
+    const { base, dir } = await start();
+    const a = author();
+    expect((await post(base, '/publish', a.bundle)).status).toBe(200);
+
+    // The published BUNDLE is public — a stranger fetches it verbatim, so it stays plaintext JSON.
+    const bundleRaw = readFileSync(join(dir, 'bundles', 'syl_fairness-101.json'));
+    expect(() => JSON.parse(bundleRaw.toString('utf8')), 'bundles are plaintext').not.toThrow();
+
+    // The INDEX is private (it carries community invite tokens) — ciphertext on disk.
+    const indexRaw = readFileSync(join(dir, 'index.json'));
+    expect(() => JSON.parse(indexRaw.toString('utf8')), 'index.json is encrypted').toThrow();
+    expect(indexRaw.includes('syl_fairness-101'), 'no plaintext trackId leaks from the index file').toBe(false);
+
+    // …yet the public /index.json ROUTE still serves it (the in-memory index decrypts at boot).
+    const served = (await (await fetch(`${base}/index.json`)).json()) as { tracks: { title: string }[] };
+    expect(served.tracks[0]!.title).toBe('Fairness 101');
+    // And the decrypt round-trips through the helper.
+    expect(Object.keys(readReg<Record<string, unknown>>(dir, 'index.json'))).toContain('syl_fairness-101');
+    a.engine.close();
+  });
+
+  it('R2 — a sign-in registry refuses to run plaintext without a KEK', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pm-reg-r2-'));
+    const saved = process.env.PHILOMATIC_KEK;
+    const signIn = { providers: [{ id: 'google', label: 'Google', authorizeUrl: () => '/x', exchange: async () => ({ provider: 'google', subject: 's' }) }], sessionSecret: 'x'.repeat(32), publicUrl: 'http://127.0.0.1' };
+    try {
+      delete process.env.PHILOMATIC_KEK;
+      expect(() => createRegistryServer({ dir, ...signIn })).toThrow(/encrypt them at rest|ALLOW_PLAINTEXT/);
+      process.env.PHILOMATIC_ALLOW_PLAINTEXT = '1';
+      const s = createRegistryServer({ dir, ...signIn });
+      expect(s).toBeDefined();
+      s.close();
+    } finally {
+      delete process.env.PHILOMATIC_ALLOW_PLAINTEXT;
+      if (saved !== undefined) process.env.PHILOMATIC_KEK = saved;
+    }
   });
 });

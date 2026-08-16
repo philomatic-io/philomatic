@@ -34,6 +34,8 @@ import { accountPageHtml, authPageHtml, formField, signInControl } from './accou
 import { bearerToken, TokenStore, tokensPath } from './tokens';
 import { originAllowed } from '../server/tenancy';
 import { safeChild } from '../server/safe-path';
+import { envKek, type Kek } from '../server/keys';
+import { registryDEK, readPrivateJson, writePrivateJson } from './registry-crypto';
 import { callerKey, RateLimiter } from '../server/rate-limit';
 import { buildPublicationHtml } from '../cli/export-track';
 import { slugify } from '../schema/ids';
@@ -141,6 +143,9 @@ export interface RegistryOptions {
   providers?: OAuthProvider[];
   /** HMAC secret for session cookies. Default `SESSION_SECRET`; absent disables sign-in. */
   sessionSecret?: string;
+  /** Key-encryption key for at-rest encryption of the registry's private state. Omitted →
+   *  `PHILOMATIC_KEK` from the env (and, in production, the KMS adapter). Tests inject one. */
+  kek?: Kek;
   /**
    * The public origin this registry is reached at, e.g. `https://philomatic.io` — the OAuth
    * redirect URI is built from it and must match what the provider has registered. Default
@@ -266,15 +271,27 @@ export function createRegistryServer(opts: RegistryOptions = {}): Server {
     return true;
   };
   const startedAt = new Date().toISOString();
-  const accounts = new AccountStore(accountsPath(dir));
-  /** The only name that reaches other people: the chosen handle, never the provider's real
-   *  name or email. Falls back to a stable stub. */
-  const publicName = (a: Account | undefined): string => a?.username ?? (a !== undefined ? `member-${a.id.slice(4, 10)}` : 'someone');
-  const tokens = new TokenStore(tokensPath(dir));
   // Sign-in needs all three: someone to vouch, a secret to sign with, and an address to come
   // back to. Missing any one, the routes 404 and no button is shown — the feature is absent
   // rather than half-present.
   const signInReady = providers.length > 0 && sessionSecret !== undefined && sessionSecret !== '' && publicUrl !== '';
+  // Encryption at rest for the registry's PRIVATE state (accounts, tokens, the index's community
+  // secrets, the mailbox). A registry that offers sign-in holds people's emails and invite
+  // tokens, so — like a hosted instance — it refuses to run plaintext unless told to out loud.
+  // A pure public-bundle registry (no sign-in) has no PII and needs no key. Resolved before the
+  // stores, which take the DEK.
+  const kek = opts.kek ?? envKek();
+  if (signInReady && kek === undefined && process.env.PHILOMATIC_ALLOW_PLAINTEXT !== '1') {
+    throw new Error(
+      'a sign-in registry holds accounts, tokens, and invite links: set PHILOMATIC_KEK (or PHILOMATIC_KMS_KEY) to encrypt them at rest, or set PHILOMATIC_ALLOW_PLAINTEXT=1 to accept plaintext deliberately.',
+    );
+  }
+  const dek = registryDEK(dir, kek);
+  const accounts = new AccountStore(accountsPath(dir), dek);
+  /** The only name that reaches other people: the chosen handle, never the provider's real
+   *  name or email. Falls back to a stable stub. */
+  const publicName = (a: Account | undefined): string => a?.username ?? (a !== undefined ? `member-${a.id.slice(4, 10)}` : 'someone');
+  const tokens = new TokenStore(tokensPath(dir), dek);
   const cookieSecure = publicUrl.startsWith('https://');
   const redirectUriFor = (id: string) => `${publicUrl}/auth/${id}/callback`;
   /** The signed-in account for a request, or undefined. */
@@ -334,16 +351,19 @@ export function createRegistryServer(opts: RegistryOptions = {}): Server {
   // resolves by name, exact versions resolve forever (a bundle citing v2 must find v2), and
   // withdraw hides a framework from LATEST resolution without breaking exact citations.
   mkdirSync(join(dir, 'frameworks'), { recursive: true });
+  // The framework index maps names to owner accounts — private (it carries account ids), and
+  // held in memory + saved on change, so encrypting the file is one decrypt at boot, one encrypt
+  // per change. The published framework DEFS (frameworks/<name>@v*.json) stay plaintext (public).
   const fwIndexPath = join(dir, 'frameworks.json');
   const fwIndex: Record<string, { ownerAccountId: string; versions: number[]; withdrawn?: boolean; updatedAt: number }> =
-    existsSync(fwIndexPath) ? (JSON.parse(readFileSync(fwIndexPath, 'utf8')) as typeof fwIndex) : {};
-  const saveFwIndex = (): void => writeFileSync(fwIndexPath, JSON.stringify(fwIndex, null, 2));
+    existsSync(fwIndexPath) ? readPrivateJson<typeof fwIndex>(fwIndexPath, dek) : {};
+  const saveFwIndex = (): void => writePrivateJson(fwIndexPath, fwIndex, dek);
   const FW_NAME = /^[a-zA-Z0-9-]{1,64}$/; // username charset — and the path-traversal wall
 
+  // The index carries community INVITE TOKENS and follower cursors inside each entry (the public
+  // projection strips them; the file holds them), so it is private and encrypted at rest.
   const indexPath = join(dir, 'index.json');
-  const index: Record<string, RegistryEntry> = existsSync(indexPath)
-    ? (JSON.parse(readFileSync(indexPath, 'utf8')) as Record<string, RegistryEntry>)
-    : {};
+  const index: Record<string, RegistryEntry> = existsSync(indexPath) ? readPrivateJson<Record<string, RegistryEntry>>(indexPath, dek) : {};
   // One-time lift (community split): entries written before the split carry the
   // community fields FLAT on the entry — move them under `community` so every reader/writer
   // sees one shape. Saved back on the next saveIndex like any other mutation.
@@ -361,7 +381,7 @@ export function createRegistryServer(opts: RegistryOptions = {}): Server {
     delete e.followers;
     if (Object.keys(lifted).length > 0) e.community = lifted;
   }
-  const saveIndex = (): void => writeFileSync(indexPath, JSON.stringify(index, null, 2));
+  const saveIndex = (): void => writePrivateJson(indexPath, index, dek);
 
   /** The goal off a bundle's payload (its first track — a publication carries exactly one). */
   const goalOf = (bundle: unknown): string | undefined => {
@@ -1238,18 +1258,17 @@ export function createRegistryServer(opts: RegistryOptions = {}): Server {
         return;
       }
       const isOwner = entry.ownerAccountId === account.id;
+      // The mailbox carries contributor identity and unpublished content — private, so encrypted
+      // at rest like the rest of the registry's PII.
       const file = safeChild(dir, 'contributions', `${entry.trackId}.json`);
       const load = (): ContributionRecord[] => {
         try {
-          return JSON.parse(readFileSync(file, 'utf8')) as ContributionRecord[];
+          return readPrivateJson<ContributionRecord[]>(file, dek);
         } catch {
           return [];
         }
       };
-      const save = (all: ContributionRecord[]) => {
-        mkdirSync(join(dir, 'contributions'), { recursive: true });
-        writeFileSync(file, JSON.stringify(all, null, 2));
-      };
+      const save = (all: ContributionRecord[]) => writePrivateJson(file, all, dek);
 
       if (method === 'GET') {
         // The owner reads the pending mail; a member sees only their own (so "did it send?" has
@@ -1504,7 +1523,7 @@ export function createRegistryServer(opts: RegistryOptions = {}): Server {
 }
 
 /** `tsx src/registry/server.ts [--dir D] [--port N] [--host H]` */
-function main(): void {
+async function main(): Promise<void> {
   const arg = (name: string): string | undefined => {
     const i = process.argv.indexOf(name);
     return i >= 0 ? process.argv[i + 1] : undefined;
@@ -1512,10 +1531,13 @@ function main(): void {
   const port = Number(arg('--port') ?? process.env.REGISTRY_PORT ?? 4400);
   const host = arg('--host') ?? process.env.REGISTRY_HOST ?? '0.0.0.0';
   const dir = arg('--dir') ?? process.env.REGISTRY_DIR ?? '.philomatic-registry';
-  const server = createRegistryServer({ dir, port, host });
+  // The KEK resolves async when it comes from KMS (one decrypt at boot); its wrapped file sits
+  // in the registry dir it protects.
+  const kek = await (await import('../server/kms')).resolveKekFromEnv(dir);
+  const server = createRegistryServer({ dir, port, host, ...(kek !== undefined ? { kek } : {}) });
   server.listen(port, host, () => {
     console.log(`philomatic registry listening on http://${host}:${port}  (dir: ${dir})`);
   });
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (import.meta.url === `file://${process.argv[1]}`) void main();

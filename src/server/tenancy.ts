@@ -34,6 +34,9 @@ export interface Tenant {
   /** The account it belongs to, or `'local'` in single-tenant mode. */
   accountId: string;
   dbPath: string;
+  /** The wrapped-DEK file beside the library, when encryption at rest is in force. Absent in
+   *  single-tenant mode (plaintext by default) and on a hosted server without a KEK. */
+  keyPath?: string;
   /**
    * Does a hosted library actually EXIST for this account?
    *
@@ -184,6 +187,9 @@ export function hostedTenants(opts: {
   verify: TokenVerifier;
   /** Whose SESSION cookie is this? Absent = cookies are not accepted (token-only host). */
   verifySession?: TokenVerifier;
+  /** True when a KEK is configured: each library carries a wrapped-DEK sibling and is encrypted
+   *  at rest. False on a self-hosted server running plaintext (the opt-out). */
+  encrypted?: boolean;
 }): TenantResolver {
   return {
     resolve: async (req) => {
@@ -204,7 +210,10 @@ export function hostedTenants(opts: {
       // wrong.
       if (!/^acc_[a-z0-9]+$/.test(accountId)) return undefined;
       const dbPath = safeChild(opts.dataDir, `${accountId}.sqlite`);
-      return { accountId, dbPath, provisioned: existsSync(dbPath) };
+      // The wrapped-DEK sits beside the library, under the same containment guard. Present
+      // only when a KEK is configured — otherwise the library is plaintext (dev/self-host).
+      const keyPath = opts.encrypted === true ? safeChild(opts.dataDir, `${accountId}.key`) : undefined;
+      return { accountId, dbPath, keyPath, provisioned: existsSync(dbPath) };
     },
   };
 }
@@ -230,15 +239,20 @@ export class EnginePool {
     this.now = opts.now ?? (() => Date.now());
   }
 
-  /** Run `fn` against the engine for `dbPath`, opening it if needed and holding it meanwhile. */
-  async withEngine<T>(dbPath: string, fn: (engine: PhilomaticEngine) => T | Promise<T>): Promise<T> {
+  /**
+   * Run `fn` against the engine for `dbPath`, opening it if needed and holding it meanwhile.
+   * `keyFor` (when the library is encrypted) is called ONLY on a genuine open — a cache hit
+   * never re-derives the key, so the eventual KMS unwrap is one call per library-open, not per
+   * request. It resolves the raw DEK (minting + persisting the wrapped key on first provision).
+   */
+  async withEngine<T>(dbPath: string, fn: (engine: PhilomaticEngine) => T | Promise<T>, keyFor?: () => Buffer | undefined): Promise<T> {
     let entry = this.open.get(dbPath);
     if (entry === undefined) {
       this.evictIdle();
       if (this.open.size >= this.cap) {
         throw new Error(`too many libraries open at once (cap ${this.cap}) — raise the cap or shorten the idle timeout`);
       }
-      entry = { engine: PhilomaticEngine.open(dbPath), borrowed: 0, lastUsed: this.now() };
+      entry = { engine: PhilomaticEngine.open(dbPath, { key: keyFor?.() }), borrowed: 0, lastUsed: this.now() };
       this.open.set(dbPath, entry);
     }
     entry.borrowed += 1;

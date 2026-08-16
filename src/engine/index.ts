@@ -123,6 +123,9 @@ export type { CanonicalPatchPayload, CanonicalPayload, Modality, TypedTag } from
 export { conceptId, questionId, snippetId, sourceId, trackId } from '../schema/ids';
 // The annotated edge taxonomy: consumed by `pnpm diagram` and its drift test.
 export { taxonomy, taxonomyMermaid } from '../io/taxonomy';
+// The plaintext→encrypted migration's in-place rekey — a storage operation surfaced through the
+// facade so the migration helper (a server-tier module) need not reach past the lock line.
+export { rekeyDb } from '../storage/db';
 export type { Taxonomy, TaxonomyEdge, TaxonomyVerb } from '../io/taxonomy';
 
 /**
@@ -230,8 +233,8 @@ export class PhilomaticEngine {
     return { backupPath };
   }
 
-  static open(path = ':memory:', opts: { now?: () => number } = {}): PhilomaticEngine {
-    const { db, sqlite } = openDb(path);
+  static open(path = ':memory:', opts: { now?: () => number; key?: Buffer } = {}): PhilomaticEngine {
+    const { db, sqlite } = openDb(path, opts.key);
     return new PhilomaticEngine(db, sqlite, opts.now ?? (() => Date.now()), path === ':memory:' ? undefined : path);
   }
 
