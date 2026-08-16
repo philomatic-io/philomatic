@@ -14,6 +14,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { PhilomaticEngine } from '../src/engine';
+import { readReg, writeReg } from './registry-file';
 import { createRegistryServer } from '../src/registry/server';
 import type { OAuthProvider } from '../src/registry/oauth';
 
@@ -74,7 +75,7 @@ describe('claiming a name', () => {
     const reg = await registry({ subject: 'sub-1', name: 'Bob' });
     const b = bundle('Mine');
     expect((await push(reg.url, b.body, { authorization: `Bearer ${reg.token}` })).status).toBe(200);
-    const index = JSON.parse(readFileSync(join(reg.dir, 'index.json'), 'utf8')) as Record<string, { ownerAccountId?: string }>;
+    const index = readReg<Record<string, { ownerAccountId?: string }>>(reg.dir, 'index.json');
     expect(Object.values(index)[0]!.ownerAccountId).toMatch(/^acc_/);
   });
 
@@ -89,7 +90,7 @@ describe('claiming a name', () => {
     expect(res.status).toBe(401);
     expect((await res.json()).error).toMatch(/needs an account/);
     // And nothing was written: a refused push leaves no half-published entry.
-    expect(existsSync(join(reg.dir, 'index.json')) ? JSON.parse(readFileSync(join(reg.dir, 'index.json'), 'utf8')) : {}).toEqual({});
+    expect(existsSync(join(reg.dir, 'index.json')) ? readReg(reg.dir, 'index.json') : {}).toEqual({});
   });
 
   it('the KEY buys the account: publishing an unowned track while signed in claims it', async () => {
@@ -99,7 +100,7 @@ describe('claiming a name', () => {
     const b = bundle('Legacy');
     await push(reg.url, b.body); // published before accounts, key-pinned
     expect((await push(reg.url, b.body, { authorization: `Bearer ${reg.token}` })).status).toBe(200);
-    const index = JSON.parse(readFileSync(join(reg.dir, 'index.json'), 'utf8')) as Record<string, { ownerAccountId?: string }>;
+    const index = readReg<Record<string, { ownerAccountId?: string }>>(reg.dir, 'index.json');
     expect(Object.values(index)[0]!.ownerAccountId).toMatch(/^acc_/);
   });
 });
@@ -124,11 +125,11 @@ describe('once a track is owned', () => {
     const b = bundle('Mine');
     await push(reg.url, b.body, { authorization: `Bearer ${reg.token}` });
     // A second account on the same registry, with the same bundle in hand.
-    const index = JSON.parse(readFileSync(join(reg.dir, 'index.json'), 'utf8')) as Record<string, { ownerAccountId: string }>;
+    const index = readReg<Record<string, { ownerAccountId: string }>>(reg.dir, 'index.json');
     const trackId = Object.keys(index)[0]!;
-    const accounts = JSON.parse(readFileSync(join(reg.dir, 'accounts.json'), 'utf8')) as { accounts: { id: string }[] };
+    const accounts = readReg<{ accounts: { id: string }[] }>(reg.dir, 'accounts.json');
     index[trackId]!.ownerAccountId = 'acc_somebodyelse';
-    writeFileSync(join(reg.dir, 'index.json'), JSON.stringify(index));
+    writeReg(reg.dir, 'index.json', index);
     void accounts;
     // The running server holds the index in memory, so re-read through a fresh one.
     const second = createRegistryServer({ dir: reg.dir, introHtml: false, providers: [provider('sub-1', 'Bob')], sessionSecret: SECRET, publicUrl: 'http://127.0.0.1' });
@@ -145,7 +146,7 @@ describe('once a track is owned', () => {
     const reg = await registry({ subject: 'sub-1', name: 'Bob' });
     const b = bundle('Mine');
     await push(reg.url, b.body, { authorization: `Bearer ${reg.token}` });
-    const trackId = Object.keys(JSON.parse(readFileSync(join(reg.dir, 'index.json'), 'utf8')))[0]!;
+    const trackId = Object.keys(readReg<Record<string, unknown>>(reg.dir, 'index.json'))[0]!;
     const res = await fetch(`${reg.url}/unpublish`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${reg.token}` },
@@ -173,7 +174,7 @@ describe('a registry with no sign-in configured', () => {
     const b = bundle('Self hosted');
     expect((await push(url, b.body)).status).toBe(200);
     expect((await push(url, b.body)).status).toBe(200); // same key, still fine
-    const index = JSON.parse(readFileSync(join(dir, 'index.json'), 'utf8')) as Record<string, { ownerAccountId?: string }>;
+    const index = readReg<Record<string, { ownerAccountId?: string }>>(dir, 'index.json');
     expect(Object.values(index)[0]!.ownerAccountId).toBeUndefined();
   });
 });
@@ -232,7 +233,7 @@ describe('a self-hosted workbench publishing to a public registry', () => {
     // With one: published, and owned by that account — the whole point of requiring it.
     const ok = await push(await instance(reg.token));
     expect(ok.status).toBe(200);
-    const index = JSON.parse(readFileSync(join(reg.dir, 'index.json'), 'utf8')) as Record<string, { ownerAccountId?: string }>;
+    const index = readReg<Record<string, { ownerAccountId?: string }>>(reg.dir, 'index.json');
     expect(Object.values(index)[0]!.ownerAccountId, 'a pushed track has a real owner now').toBeDefined();
 
     // And the credential goes ONLY to the registry it belongs to: `/push` takes its target from
@@ -283,7 +284,7 @@ describe('a cross-site page cannot act as a signed-in visitor', () => {
     });
     expect(attack.status, 'published as the victim').toBe(403);
     expect((await attack.json()).error).toMatch(/cross-site/);
-    expect(existsSync(join(reg.dir, 'index.json')) ? JSON.parse(readFileSync(join(reg.dir, 'index.json'), 'utf8')) : {}).toEqual({});
+    expect(existsSync(join(reg.dir, 'index.json')) ? readReg(reg.dir, 'index.json') : {}).toEqual({});
 
     // Our own page, same cookie: fine.
     const ours = await fetch(`${reg.url}/publish`, {

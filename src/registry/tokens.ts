@@ -24,8 +24,9 @@
  * `randomBytes`; there is nothing to guess, and a slow hash would buy only a slow server.
  */
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync } from 'node:fs';
+import { readPrivateJson, writePrivateJson } from './registry-crypto';
+import { join } from 'node:path';
 
 export interface AccessToken {
   /** `tok_<24 hex>` — public, carried in the token itself. */
@@ -57,14 +58,17 @@ function hashSecret(secret: string): string {
 
 export class TokenStore {
   private readonly path: string | undefined;
+  private readonly dek: Buffer | undefined;
   private tokens: AccessToken[] = [];
   private dirty = false;
 
-  constructor(path?: string) {
+  /** `dek` (when a KEK is configured) encrypts the file at rest — it holds token hashes. */
+  constructor(path?: string, dek?: Buffer) {
     this.path = path;
+    this.dek = dek;
     if (path !== undefined && existsSync(path)) {
       try {
-        const raw = JSON.parse(readFileSync(path, 'utf8')) as Persisted;
+        const raw = readPrivateJson<Persisted>(path, dek);
         this.tokens = Array.isArray(raw.tokens) ? raw.tokens : [];
       } catch {
         // A corrupt file must fail CLOSED, unlike accounts: an unreadable token store means no
@@ -80,15 +84,9 @@ export class TokenStore {
       this.dirty = false;
       return;
     }
-    // 0700/0600: this file holds account emails and token hashes, and the default 0644 makes
-    // both readable by every local user on the box. The mode is set on the TEMP file so the
-    // rename carries it, and re-applied because a file created before this existed keeps its
-    // old permissions forever otherwise.
-    mkdirSync(dirname(this.path), { recursive: true, mode: 0o700 });
-    const tmp = `${this.path}.tmp`;
-    writeFileSync(tmp, JSON.stringify({ version: 1, tokens: this.tokens } satisfies Persisted, null, 2), { mode: 0o600 });
-    renameSync(tmp, this.path);
-    chmodSync(this.path, 0o600);
+    // 0600 always (it holds token hashes), ciphertext when a KEK is in force. The atomic
+    // rename + re-chmod is the writePrivateJson discipline; the format follows the DEK.
+    writePrivateJson(this.path, { version: 1, tokens: this.tokens } satisfies Persisted, this.dek);
     this.dirty = false;
   }
 

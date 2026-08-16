@@ -11,6 +11,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Server } from 'node:http';
+import { readReg, writeReg } from './registry-file';
 import { createRegistryServer } from '../src/registry/server';
 import { PhilomaticEngine } from '../src/engine';
 import type { OAuthProvider } from '../src/registry/oauth';
@@ -338,13 +339,12 @@ it('a PRE-SPLIT index (flat community fields) lifts on boot — nothing dissolve
     // Flatten: the shape every entry had before the split.
     const { readFileSync, writeFileSync } = await import('node:fs');
     const { join: joinPath } = await import('node:path');
-    const indexPath = joinPath(dir, 'index.json');
-    const idx = JSON.parse(readFileSync(indexPath, 'utf8')) as Record<string, { community?: Record<string, unknown> } & Record<string, unknown>>;
+    const idx = readReg<Record<string, { community?: Record<string, unknown> } & Record<string, unknown>>>(dir, 'index.json');
     for (const e of Object.values(idx)) {
       Object.assign(e, e.community);
       delete e.community;
     }
-    writeFileSync(indexPath, JSON.stringify(idx, null, 2));
+    writeReg(dir, 'index.json', idx);
 
     const server2 = createRegistryServer({ dir, introHtml: false, providers: [provider()], sessionSecret: SECRET, publicUrl: 'http://reg.test' });
     await new Promise<void>((r) => server2.listen(0, '127.0.0.1', r));

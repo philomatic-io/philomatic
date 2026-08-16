@@ -15,13 +15,13 @@
  * stable for the life of the account; an email address is a display attribute that people
  * change, and re-keying on it would silently merge or orphan accounts when they do.
  */
-import { writeJsonPrivate } from '../server/json-file';
+import { readPrivateJson, writePrivateJson } from './registry-crypto';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 // The cookie's NAME is shared with the host, which must recognise one; the SECRET is not, and
 // stays here. See src/server/session.ts for why that file is on the other side.
 import { readCookie, readSessionCookie, sessionCookieName } from '../server/session';
 export { readCookie, readSessionCookie, sessionCookieName };
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 export interface Account {
@@ -67,14 +67,17 @@ interface Persisted {
  */
 export class AccountStore {
   private readonly path: string | undefined;
+  private readonly dek: Buffer | undefined;
   private accounts: Account[] = [];
 
-  /** `undefined` keeps everything in memory — for tests, and for a registry with no disk. */
-  constructor(path?: string) {
+  /** `undefined` path keeps everything in memory — for tests, and for a registry with no disk.
+   *  `dek` (when a KEK is configured) encrypts the file at rest — it holds emails and subjects. */
+  constructor(path?: string, dek?: Buffer) {
     this.path = path;
+    this.dek = dek;
     if (path !== undefined && existsSync(path)) {
       try {
-        const raw = JSON.parse(readFileSync(path, 'utf8')) as Persisted;
+        const raw = readPrivateJson<Persisted>(path, dek);
         this.accounts = Array.isArray(raw.accounts) ? raw.accounts : [];
       } catch {
         // A corrupt file must not take the registry down: publishing and reading are unaffected
@@ -86,7 +89,7 @@ export class AccountStore {
 
   private flush(): void {
     if (this.path === undefined) return;
-    writeJsonPrivate(this.path, { version: 1, accounts: this.accounts } satisfies Persisted);
+    writePrivateJson(this.path, { version: 1, accounts: this.accounts } satisfies Persisted, this.dek);
   }
 
   get(id: string): Account | undefined {
