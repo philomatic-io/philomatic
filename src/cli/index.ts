@@ -200,10 +200,13 @@ async function main(): Promise<void> {
     const port = Number(flagValue(args, '--port') ?? process.env.REGISTRY_PORT ?? 4400);
     const host = flagValue(args, '--host') ?? '0.0.0.0';
     const dir = flagValue(args, '--dir') ?? '.philomatic-registry';
+    // The KEK resolves async when it comes from KMS (one decrypt at boot).
+    const kek = await (await import('../server/kms')).resolveKekFromEnv(dir);
     createRegistryServer({
       dir,
       port,
       host,
+      ...(kek !== undefined ? { kek } : {}),
     }).listen(port, host, () => {
       console.log(`philomatic registry listening on http://${host}:${port}  (dir: ${dir})`);
     });

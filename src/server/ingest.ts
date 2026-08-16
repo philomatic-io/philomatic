@@ -1324,7 +1324,7 @@ function asObject(body: unknown): Record<string, unknown> {
 
 
 /** `tsx src/server/ingest.ts [--db path] [--port n] [--host h] [--token t] [--learner id]` */
-function main(): void {
+async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const flag = (name: string): string | undefined => {
     const i = argv.indexOf(name);
@@ -1335,6 +1335,10 @@ function main(): void {
   const db = flag('--db');
   const token = flag('--token');
   const learner = flag('--learner');
+  // The KEK resolves ASYNC when it comes from KMS (one decrypt at boot); the server itself stays
+  // synchronous. In hosting mode the wrapped-KEK file sits in the data dir it protects.
+  const dataDir = process.env.INGEST_DATA_DIR;
+  const kek = dataDir !== undefined ? await (await import('./kms')).resolveKekFromEnv(dataDir) : undefined;
 
   // Secure by default. The default bind is loopback, where an open API is
   // fine — nothing off this machine can reach it. `--host 0.0.0.0` silently changed that: the
@@ -1353,7 +1357,7 @@ function main(): void {
     process.exitCode = 1;
     return;
   }
-  const server = createIngestServer({ db, host, port, token, learner });
+  const server = createIngestServer({ db, host, port, token, learner, ...(kek !== undefined ? { kek } : {}) });
   server.listen(port, host, () => {
     const dbLabel = db ?? process.env.INGEST_DB ?? '.philomatic/philomatic.sqlite';
     console.log(`philomatic ingest listening on http://${host}:${port}  (db: ${dbLabel})`);
@@ -1365,6 +1369,6 @@ function main(): void {
 }
 
 // Run as a script (tsx/node), but stay importable for tests.
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (import.meta.url === `file://${process.argv[1]}`) void main();
 
 export { withPriorSourceFields }; // re-exported: the regression tests import it from here

@@ -1523,7 +1523,7 @@ export function createRegistryServer(opts: RegistryOptions = {}): Server {
 }
 
 /** `tsx src/registry/server.ts [--dir D] [--port N] [--host H]` */
-function main(): void {
+async function main(): Promise<void> {
   const arg = (name: string): string | undefined => {
     const i = process.argv.indexOf(name);
     return i >= 0 ? process.argv[i + 1] : undefined;
@@ -1531,10 +1531,13 @@ function main(): void {
   const port = Number(arg('--port') ?? process.env.REGISTRY_PORT ?? 4400);
   const host = arg('--host') ?? process.env.REGISTRY_HOST ?? '0.0.0.0';
   const dir = arg('--dir') ?? process.env.REGISTRY_DIR ?? '.philomatic-registry';
-  const server = createRegistryServer({ dir, port, host });
+  // The KEK resolves async when it comes from KMS (one decrypt at boot); its wrapped file sits
+  // in the registry dir it protects.
+  const kek = await (await import('../server/kms')).resolveKekFromEnv(dir);
+  const server = createRegistryServer({ dir, port, host, ...(kek !== undefined ? { kek } : {}) });
   server.listen(port, host, () => {
     console.log(`philomatic registry listening on http://${host}:${port}  (dir: ${dir})`);
   });
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (import.meta.url === `file://${process.argv[1]}`) void main();
