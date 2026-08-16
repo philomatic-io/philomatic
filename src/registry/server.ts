@@ -41,7 +41,7 @@ import { buildPublicationHtml } from '../cli/export-track';
 import { slugify } from '../schema/ids';
 import { brandLabel, escHtml as esc, publicShellHtml } from '../server/public-shell';
 import { exampleList, readExample } from '../server/examples';
-import { cspForInlinePage, SECURITY_HEADERS } from '../server/csp';
+import { cspForInlinePage, cspForSlides, SECURITY_HEADERS } from '../server/csp';
 
 export interface RegistryEntry {
   trackId: string;
@@ -1492,8 +1492,11 @@ export function createRegistryServer(opts: RegistryOptions = {}): Server {
 
     // The intro deck — "Keep the thread", one self-contained RevealJS page (docs/slides).
     if (method === 'GET' && introHtml !== undefined && (path === '/intro' || path === '/intro/')) {
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', ...CORS, ...SECURITY_HEADERS });
-      res.end(readFileSync(introHtml));
+      // The deck loads reveal.js from a CDN and inits inline — the strict base CSP blocks both,
+      // so this ONE route gets the slide-scoped policy (jsdelivr + the init's own hash).
+      const deck = readFileSync(introHtml);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', ...CORS, ...SECURITY_HEADERS, 'Content-Security-Policy': cspForSlides(deck.toString('utf8')) });
+      res.end(deck);
       return;
     }
 
