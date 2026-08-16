@@ -1,0 +1,30 @@
+/*
+ * The EXTENSION program — the browser half of `src`.
+ *
+ * These four files run in a page, not in Node: they need DOM and the chrome APIs, so the root
+ * config excludes them rather than weaken its DOM-less guardrail. That exclusion only pays off
+ * if something else checks them, which is why `pnpm typecheck` runs this program too — before
+ * 2026-08-02 it did not, and crop.ts was not even listed here, so it was checked by nothing.
+ *
+ * The extension's Node-shaped files (api, config, migrate, sw) stay in the root program.
+ */
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": [
+      "chrome"
+    ]
+  },
+  "include": [
+    "popup.ts",
+    "options.ts",
+    "select-md.ts",
+    "crop.ts"
+  ],
+  "exclude": []
+}

@@ -1,0 +1,33 @@
+# Philomatic, self-hosted in one command:
+#
+#   docker compose up -d
+#
+# then open http://localhost:4321 (the workbench) and point the browser extension /
+# Obsidian plugin at the same URL. Your data lives in the `philomatic-data` volume;
+# `docker compose down` keeps it, `docker compose down -v` deletes it.
+services:
+  philomatic:
+    build: .
+    ports:
+      # Loopback-only by default (local-first: a bare "4321:4321" would bind 0.0.0.0 and expose
+      # an often-tokenless write surface to the LAN). To serve your network deliberately, use
+      # "4321:4321" AND set INGEST_TOKEN below.
+      - "127.0.0.1:4321:4321"
+    volumes:
+      # Named volume by default. To share the database with native `pnpm serve` runs
+      # (the same store your CLI uses), swap in the bind mount below instead.
+      - philomatic-data:/app/.philomatic
+      # - ./.philomatic:/app/.philomatic
+    # environment:
+    #   INGEST_TOKEN: change-me   # require X-Ingest-Token on writes
+    #   INGEST_LEARNER: lnr_you   # pin this instance to one learner (tenancy prep)
+    init: true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4321/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+
+volumes:
+  philomatic-data:

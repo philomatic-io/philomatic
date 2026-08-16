@@ -1,0 +1,5758 @@
+/* Philomatic workbench (redesign) — dark, Inter, purple accent. All local, zero external
+   requests (isolation guarantee): system-stack fonts, Inter if the OS has it.
+   The design tokens live in tokens.css — the ONE styling rule,
+   shared with the server-rendered public pages. Never define a palette value here. */
+@import './tokens.css';
+* {
+  box-sizing: border-box;
+}
+
+/* ── Shared field/button primitives (public-polish) — ONE implementation of "an
+   input", "a button", "a ghost button" for the public pages (ask, registry); workbench panes
+   keep their scoped styles until the mark-component pass. Variations are explicit page-CSS
+   overrides, never re-implementations. */
+.pm-input { padding: 0.5rem 0.65rem; border-radius: var(--radius-md); border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; }
+.pm-btn { padding: 0.55rem 0.9rem; border-radius: var(--radius-md); border: 1px solid var(--accent); background: var(--accent-bg); color: var(--text); font: inherit; cursor: pointer; }
+.pm-btn:hover { border-color: var(--accent-soft); }
+.pm-btn-ghost { background: none; border: 1px dashed var(--line); color: var(--muted); }
+.pm-btn-ghost:hover { border-color: var(--muted); }
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+h1,
+h2,
+h3 {
+  font-weight: 500; /* Nocturne: hierarchy is size + space, never weight past 500 */
+  margin: 0;
+}
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+a {
+  color: var(--accent-soft);
+}
+/* Nocturne: themed focus, never the default blue ring. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+::selection {
+  background: var(--accent-bg);
+}
+
+/* Minimal, sleek scrollbars — thin, no buttons, a subtle thumb that lifts on hover. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text) 20%, transparent) transparent;
+}
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text) 18%, transparent);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--text) 34%, transparent);
+  background-clip: padding-box;
+}
+code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+}
+
+/* Next reading (experiment): the two live moves from a source — deeper / wider. */
+.next-moves {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.next-track {
+  color: var(--faint);
+  font-size: 0.74rem;
+  margin-top: 0.2rem;
+}
+.next-move {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.32rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--faint);
+}
+.next-move-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.next-move:hover {
+  border-color: var(--line-strong);
+}
+.next-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+.next-title {
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 0.85rem;
+  padding: 0;
+  text-align: left;
+}
+.next-title:hover {
+  color: var(--accent-soft);
+}
+
+/* Publication topics (concept-anchored bundles): the outline look on the public page. */
+.pub-topic + .pub-topic {
+  border-top: 1px solid var(--divider);
+  padding-top: 1rem;
+}
+.pub-topic {
+  margin-top: 1rem;
+}
+.pub-topic-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.pub-topic-icon {
+  display: inline-flex;
+  color: var(--k-concept);
+}
+.pub-topic-name {
+  color: var(--k-concept);
+  font-size: 1.05rem;
+}
+.pub-topic-empty {
+  color: var(--faint);
+  font-style: italic;
+  font-size: 0.85rem;
+  margin: 0 0 0 1.5rem;
+}
+
+/* Journey rows: fixed number gutter + right-edge read pill = aligned columns. */
+.col-row-title .path-num {
+  flex: none;
+  min-width: 1.1rem;
+  text-align: right;
+}
+.row-read {
+  margin-left: auto; /* right-aligns when it's the first right-side element */
+  flex: none;
+  font-size: 0.62rem;
+  padding: 0 7px;
+  cursor: pointer;
+}
+/* When tools precede the pill, THEY take the auto margin. */
+.row-tools + .row-read,
+.row-read + .row-tools {
+  margin-left: 0.15rem;
+}
+/* Expanded concept sub-rows (Journey concept lens). */
+.col-row.concept-sub {
+  padding-left: 2.1rem;
+}
+.col-row.concept-sub .row-title-text {
+  font-size: 0.85rem;
+}
+.concept-sub-empty {
+  padding: 0.1rem 0 0.3rem 2.3rem;
+  font-size: 0.78rem;
+}
+.concept-count {
+  color: var(--faint);
+  font-size: 0.72rem;
+}
+/* Concept lens: break rulers between topic groups; N.M numbers get more room. */
+.lens-group + .lens-group {
+  border-top: 1px solid var(--divider);
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+}
+.path-num.lens-num {
+  min-width: 1.7rem;
+}
+
+/* Journey row tools (× / ↑↓): quiet until the row is hovered. */
+.row-tools {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 0.15rem;
+  flex: none;
+  /* rendered only in edit mode — always visible there */
+  opacity: 1;
+}
+/* Open-in-Library (Books) — present on every concept row, revealed on hover. */
+.row-open {
+  margin-left: auto;
+  flex: none;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.col-row:hover .row-open {
+  opacity: 1;
+}
+.row-open + .row-tools {
+  margin-left: 0.1rem;
+}
+.row-tools .path-x {
+  padding: 0 3px;
+  /* the CONTAINER gates visibility here (hover / edit mode); the Library's per-× base
+     opacity:0 + .path-row:hover reveal doesn't apply to Journey rows */
+  opacity: 1;
+}
+/* Edit mode: the remove-× reads as destructive. */
+.journey.editing .x-del {
+  color: var(--danger);
+}
+
+/* Concept structure editing (Journey concept column). */
+.concept-rel-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.9rem 0.3rem;
+}
+.concept-rel-label {
+  color: var(--faint);
+  font-size: 0.72rem;
+}
+/* In-track concepts read louder — a bigger diamond, brighter. */
+.concept-glyph {
+  display: inline-flex;
+  color: var(--faint);
+}
+.concept-glyph.in-track {
+  color: var(--k-concept);
+}
+/* Open questions stand out in the concept-questions list. */
+.col-row.q-open .col-row-meta {
+  color: var(--raised);
+}
+.snippet-cell {
+  align-items: flex-start;
+}
+.snippet-cell-body {
+  min-width: 0;
+  overflow: hidden;
+}
+/* Image snippets render the real picture, capped so a big capture stays in-column. */
+.snippet-cell-body .md-img {
+  max-height: 220px;
+  margin-top: 0.2rem;
+}
+.concept-under {
+  color: var(--faint);
+  font-size: 0.72rem;
+}
+/* Derived reading order in the track detail (concepts-only track). */
+.derived-src {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.derived-n {
+  color: var(--faint);
+  font-size: 0.78rem;
+  min-width: 1rem;
+  text-align: right;
+}
+.derived-under {
+  color: var(--faint);
+}
+
+/* Removable concept chip (track detail): label + × in one pill. */
+.chip.removable {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding-right: 0.15rem;
+}
+.chip.removable .chip-label {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+.chip.removable .chip-x {
+  background: none;
+  border: none;
+  color: var(--faint);
+  cursor: pointer;
+  padding: 0 0.2rem;
+  line-height: 1;
+}
+.chip.removable .chip-x:hover {
+  color: var(--danger);
+}
+
+/* Question open/answered section headers + raise/answer badges. */
+.q-section {
+  font-size: 0.66rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  padding: 0.55rem 0.9rem 0.2rem;
+}
+.q-section.open {
+  color: var(--raised);
+}
+.q-section.answered {
+  color: var(--ok);
+}
+.rel-badge {
+  font-size: 0.62rem;
+  letter-spacing: 0.03em;
+  border-radius: 999px;
+  padding: 0 0.4rem;
+  margin-left: 0.35rem;
+  white-space: nowrap;
+}
+.rel-badge.raised {
+  color: var(--raised);
+  border: 1px solid color-mix(in srgb, var(--raised) 45%, transparent);
+}
+.rel-badge.answered {
+  color: var(--ok);
+  border: 1px solid color-mix(in srgb, var(--ok) 45%, transparent);
+}
+
+/* Drop slots to add a concept at root / end (Journey By-concept edit). */
+.concept-slot {
+  margin: 0.25rem 0.9rem;
+  padding: 0.5rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  color: var(--faint);
+  font-size: 0.76rem;
+  text-align: center;
+}
+.concept-slot.over {
+  border-color: var(--k-concept);
+  color: var(--k-concept);
+  background: color-mix(in srgb, var(--k-concept) 10%, transparent);
+}
+
+/* One-click include for a not-yet-included concept. */
+.path-x.x-include {
+  color: var(--k-concept);
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  border: 1px solid color-mix(in srgb, var(--k-concept) 40%, transparent);
+  border-radius: 999px;
+  padding: 0 0.4rem;
+  white-space: nowrap;
+}
+.path-x.x-include:hover {
+  background: color-mix(in srgb, var(--k-concept) 12%, transparent);
+}
+.concept-sub-tag {
+  color: var(--faint);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid var(--chip-border);
+  border-radius: 999px;
+  padding: 0 0.35rem;
+}
+
+/* Journey path-column lens pills. */
+.journey-lens {
+  /* The pills ARE the column header — inherits .col-head's inset. */
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.lens-pct {
+  color: var(--faint);
+  margin-left: 0.2rem;
+}
+
+/* Snippet compound add-row (Library): source picker + passage text. */
+.snippet-add {
+  flex: 1 1 auto;
+  display: inline-flex;
+  gap: 0.35rem;
+}
+.snippet-add .snippet-add-src {
+  flex: 0 1 200px;
+  min-width: 0;
+}
+.snippet-add input:not(.snippet-add-src) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Rail source/concept view toggle (experiment): quiet pills in the detail pane. */
+.view-toggle-row {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+.view-pill {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.06rem 0.55rem;
+}
+.view-pill:hover {
+  border-color: var(--line);
+}
+.view-pill.on {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent-soft);
+}
+/* The concept lens wears the concept colour (shape language: concepts are mint). */
+.view-pill.concepts.on {
+  background: color-mix(in srgb, var(--k-concept) 14%, transparent);
+  border-color: var(--k-concept);
+  color: var(--k-concept);
+}
+.view-pill.concepts:not(.on):hover {
+  border-color: var(--k-concept);
+  color: var(--k-concept);
+}
+.order-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.15rem 0;
+}
+.order-dir {
+  color: var(--faint);
+  font-size: 0.74rem;
+  flex: 0 0 auto;
+}
+.order-scope {
+  color: var(--faint);
+  font-size: 0.72rem;
+  font-style: italic;
+}
+.order-addrow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+.order-pick {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  font-size: 0.78rem;
+  padding: 0.22rem 0.35rem;
+}
+.order-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: 0.8rem;
+  padding: 0.22rem 0.5rem;
+}
+.order-input::placeholder {
+  color: var(--faint);
+}
+.rail-topics {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.rail-topic + .rail-topic {
+  border-top: 1px solid var(--divider);
+  padding-top: 0.55rem;
+}
+.rail-topic-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--k-concept);
+  font-size: 0.88rem;
+  padding: 0.1rem 0;
+}
+.rail-topic-head:hover {
+  color: var(--accent-soft);
+}
+/* An UNCATEGORIZED row wears a dashed grey bar on its left edge — dashed is
+   the product's word for "something goes here", and the something is a concept. The filed rows
+   wear nothing: a solid bar on every grouped row was tried the same day and removed, because
+   marking the NORMAL case marks nothing. A bar, not a border-left: the row has rounded corners
+   and a border would bend around them. The `uncat` class rides the run only when the track HAS
+   concepts — a source-only track marks nothing, there being no filed rows to contrast with. */
+.rail-topic-source {
+  position: relative;
+}
+.rail-topic.spine.uncat > .rail-topic-source::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 5px;
+  bottom: 5px;
+  width: 0;
+  border-left: 2px dashed var(--line-strong);
+}
+/* The edit-mode picker that files an uncategorized source — indented to the row's body, so it
+   reads as belonging to the row above it. */
+.uncat-file-slot {
+  margin: -0.1rem 0 0.35rem 2.1rem;
+}
+/* The number badge — the SAME circle the published page draws (.agraph-n), so a step reads as
+   one thing on every surface. An unordered member gets an empty circle-less
+   gutter of the same width, so titles stay aligned without claiming a position. */
+.rail-topic-n {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9.5px;
+  line-height: 1;
+  color: var(--muted);
+  border: 1px solid var(--line-strong);
+  margin-top: 0.15rem; /* level with the read dot on the title's first line */
+}
+/* Nothing to say: keep the gutter, drop the circle. */
+.rail-topic-n:empty {
+  border-color: transparent;
+}
+.rail-topic-source {
+  padding: 0.2rem 0.4rem 0.2rem 0.5rem;
+  border-radius: 8px;
+  /* A read dot + optional step number on the LEFT, then a stacked body (name / author /
+     concept chips, each its own row) so narrow and wide rails lay out the same. */
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  cursor: pointer; /* the whole row navigates to the source */
+}
+/* Read dot (Journey): outline ring when unread, filled green when read. The BUTTON is a 22px
+   hit target (the 11px dot was nearly unclickable inside the row); the dot
+   itself draws as ::before, centered, leaving air before the step number. */
+.read-dot {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 22px;
+  margin: -1px 3px 0 -4px; /* air between the dot and the step number */
+  border: none;
+  background: none;
+  padding: 0;
+  position: relative;
+  cursor: pointer;
+}
+/* A DOT, not a second badge: once the step number became a 17px ring, an
+   11px ring beside it read as two circles rather than a read-state and a position. Smaller and
+   lighter, so the pair is a dot and a badge — different weights, different jobs. */
+.read-dot::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+}
+.read-dot:hover::before {
+  border-color: var(--ok);
+}
+.read-dot.on::before {
+  background: var(--ok);
+  border-color: var(--ok);
+}
+.rail-topic-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.rail-topic-source:hover {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 60%, transparent);
+}
+.rail-topic-source:hover .rail-topic-name {
+  color: var(--accent-soft);
+}
+/* The current source, when this listing renders on a source's own detail. */
+.rail-topic-source.on {
+  background: var(--accent-bg);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.track-link {
+  font-size: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: var(--text);
+  padding: 0;
+}
+.rail-topic-title > svg {
+  color: var(--faint);
+  flex: 0 0 auto;
+}
+.rail-topic-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 0.84rem;
+  padding: 0;
+  text-align: left;
+  min-width: 0;
+}
+.rail-topic-title > svg {
+  margin-top: 0.18em; /* icon rides the first line of the title */
+}
+.rail-topic-name {
+  min-width: 0;
+}
+.rail-topic-author {
+  color: var(--faint);
+  font-size: 0.76rem;
+  padding-left: 1.15rem; /* align under the title text, past the modality icon */
+}
+.rail-topic-title:hover {
+  color: var(--accent-soft);
+}
+/* Concept chips + counts are their OWN row now — left-aligned under the title, wrapping. */
+.rail-topic-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem 0.35rem;
+  padding-left: 1.15rem;
+  padding-top: 0.05rem;
+}
+/* "You are here" caret on the current source's title. */
+.rail-here {
+  display: inline-flex;
+  color: var(--accent-soft);
+  margin-top: 0.15em;
+}
+/* Open-question / snippet counts on the concept row — the glyph carries the colour. */
+.rail-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.72rem;
+  color: var(--faint);
+}
+.rail-count svg {
+  display: block;
+}
+
+/* ── Track Outline (experiment): concept-anchored reading list ────────────── */
+.outline {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 1.2rem 1.4rem 3rem;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+.outline-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+}
+.outline-pick {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.02rem;
+  padding: 0.3rem 0.6rem;
+}
+.outline-meta {
+  color: var(--faint);
+  font-size: 0.82rem;
+}
+.outline-goal {
+  color: var(--muted);
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+}
+.outline-group {
+  margin-top: 0.9rem;
+}
+/* Break rulers between numbered groups. */
+.outline-group + .outline-group {
+  border-top: 1px solid var(--divider);
+  padding-top: 0.9rem;
+}
+.outline-concept-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.outline-n {
+  color: var(--faint);
+  font-size: 0.82rem;
+  min-width: 1rem;
+  text-align: right;
+}
+.outline-concept {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: none;
+  border: none;
+  color: var(--k-concept);
+  font-size: 0.98rem;
+  padding: 0.15rem 0.3rem;
+  border-radius: 6px;
+}
+.outline-concept:hover {
+  background: var(--surface);
+  color: var(--k-concept);
+}
+.outline-concept .chip {
+  font-size: 0.7rem;
+  color: var(--muted);
+  border: 1px solid var(--chip-border);
+  background: var(--chip-bg);
+  border-radius: 999px;
+  padding: 0.02rem 0.45rem;
+}
+.outline-empty {
+  color: var(--faint);
+  font-size: 0.8rem;
+  margin: 0.15rem 0 0 1.8rem;
+  font-style: italic;
+}
+.outline-sources {
+  list-style: none;
+  margin: 0.2rem 0 0;
+  padding: 0 0 0 1.35rem;
+}
+.outline-source {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 8px;
+  color: var(--muted);
+}
+.outline-source:hover {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 60%, transparent);
+}
+/* The source (modality) icon reads quieter than the title. */
+.outline-source-row > svg {
+  color: var(--faint);
+  flex: 0 0 auto;
+}
+.outline-source.consumed .outline-title {
+  color: var(--faint);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--faint) 55%, transparent);
+}
+.outline-title {
+  background: none;
+  border: none;
+  color: var(--text);
+  padding: 0;
+  font-size: 0.9rem;
+  text-align: left;
+}
+.outline-title:hover {
+  color: var(--accent-soft);
+}
+.outline-author {
+  color: var(--faint);
+  font-size: 0.8rem;
+}
+.outline-link {
+  display: inline-flex;
+  color: var(--faint);
+  margin-left: auto;
+}
+.outline-link:hover {
+  color: var(--accent-soft);
+}
+
+.outline-source {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.1rem;
+}
+.outline-source-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.outline-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding-left: 1.55rem;
+}
+.outline-cchip {
+  background: none;
+  border: 1px solid var(--chip-border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  padding: 0.02rem 0.5rem;
+}
+.outline-cchip:hover {
+  border-color: var(--k-concept);
+  color: var(--k-concept);
+}
+/* Public pages wear the concept color at rest: muted-until-hover is a
+   workbench-density choice — a published page's chips should read as concepts immediately. */
+.pub .outline-cchip {
+  color: var(--k-concept);
+}
+
+/* Demo banner (zero-install demo): a quiet strip above the topbar. */
+.demo-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 1.1rem;
+  background: var(--accent-bg);
+  border-bottom: 1px solid var(--accent);
+  color: var(--text);
+  font-size: 0.82rem;
+  flex: 0 0 auto;
+}
+.demo-banner a {
+  margin-left: auto;
+}
+.demo-banner .demo-reset {
+  margin-top: 0;
+  font-size: 0.8rem;
+}
+
+/* ── App shell ────────────────────────────────────────────────────────────── */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.7rem 1.1rem;
+  border-bottom: 1px solid var(--divider);
+  flex: 0 0 auto;
+  /* Declared, not emergent — see --topbar-h. This is the height this bar already had. */
+  box-sizing: border-box;
+  min-height: var(--topbar-h);
+}
+.brand {
+  font-size: 1.05rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.brand .brand-sub {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 0.82rem;
+  margin-left: 0.5rem;
+}
+.tabs {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 2px;
+}
+.tab {
+  background: none;
+  border: none;
+  color: var(--muted);
+  padding: 0.25rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+.tab-exp {
+  font-size: 0.6rem;
+  color: var(--faint);
+  letter-spacing: 0.04em;
+}
+.tab.active {
+  background: var(--accent-bg);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.search {
+  margin-left: auto;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 0.35rem 0.7rem;
+  color: var(--text);
+  width: 280px;
+  max-width: 34vw;
+}
+.search::placeholder {
+  color: var(--faint);
+}
+.ghost-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+.ghost-btn:hover {
+  border-color: var(--line-strong);
+}
+
+.workbench {
+  display: grid;
+  /* rail · resizer · centre · resizer · detail — widths driven by --rail-w / --detail-w */
+  grid-template-columns: var(--rail-w, 220px) 6px minmax(0, 1fr) 6px var(--detail-w, 380px);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.resizer {
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  z-index: 3;
+  touch-action: none;
+}
+.resizer::after {
+  content: '';
+  position: absolute;
+  inset: 0 2px;
+  background: var(--divider);
+  transition: background 0.12s;
+}
+.resizer:hover::after,
+.resizer:active::after {
+  background: var(--accent);
+}
+@media (max-width: 900px) {
+  .workbench {
+    grid-template-columns: 1fr;
+  }
+  .rail,
+  .detail,
+  .resizer {
+    display: none;
+  }
+}
+.pane {
+  min-height: 0;
+  overflow-y: auto;
+}
+.rail {
+  padding: 1rem 0.9rem;
+}
+.detail {
+  padding: 1.1rem 1.2rem;
+}
+
+.error {
+  color: var(--danger);
+  padding: 0.75rem 1.1rem;
+}
+.error.inline {
+  padding: 0;
+  font-size: 0.82rem;
+}
+.hint {
+  color: var(--muted);
+  padding: 0.6rem 0;
+}
+.rail-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 1rem 0 0.4rem;
+}
+.rail-label:first-child {
+  margin-top: 0;
+}
+
+/* ── Browse rail ──────────────────────────────────────────────────────────── */
+.browse-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text);
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+.browse-row:hover {
+  background: var(--surface);
+}
+.browse-row.on {
+  background: var(--accent-bg);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.browse-count {
+  color: var(--faint);
+  font-size: 0.8rem;
+}
+/* Kind sub-facets (source types, open/answered questions): indented quiet rows. */
+.browse-sub {
+  margin: 1px 0 3px;
+  padding-left: 1.1rem;
+}
+.browse-row.sub {
+  padding: 0.18rem 0.5rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.browse-row.sub .browse-glyph {
+  color: var(--faint);
+  font-size: 0.78rem;
+  width: 15px;
+  justify-content: center;
+}
+.browse-row.sub.on {
+  color: var(--text);
+}
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.chip {
+  border: 1px solid var(--chip-border);
+  background: var(--chip-bg);
+  border-radius: 999px;
+  padding: 0.08rem 0.5rem;
+  font-size: 0.76rem;
+  color: var(--text);
+  white-space: nowrap;
+}
+button.chip {
+  cursor: pointer;
+}
+button.chip.on {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--accent-soft);
+}
+.chip.concept {
+  border-color: color-mix(in srgb, var(--k-concept) 45%, var(--chip-border));
+  color: var(--k-concept);
+}
+.chip.concept.on {
+  background: color-mix(in srgb, var(--k-concept) 18%, transparent);
+  border-color: var(--k-concept);
+}
+/* Tags carrying a remove-× align their contents on the centre line. */
+.detail-tags .chip {
+  display: inline-flex;
+  align-items: center;
+}
+/* The remove-× sits inside the pill: tiny, muted, no border of its own. */
+button.chip-x {
+  all: unset;
+  cursor: pointer;
+  margin: 0 -0.15rem 0 0.3rem;
+  padding: 0 0.15rem;
+  color: var(--faint);
+  font-size: 0.95em;
+  line-height: 1;
+  border-radius: 999px;
+}
+button.chip-x:hover {
+  color: var(--danger);
+}
+.chip.tag-add {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+/* ── Unified item list ────────────────────────────────────────────────────── */
+.list-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--divider);
+  color: var(--muted);
+  font-size: 0.82rem;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 1;
+}
+.item {
+  display: grid;
+  grid-template-columns: 28px 1fr 16px;
+  gap: 0.7rem;
+  align-items: center; /* the kind tile centers on the whole row */
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--divider);
+  border-left: 2px solid transparent;
+  color: var(--text);
+  padding: 0.75rem 1rem;
+}
+.item:hover {
+  background: var(--surface-2);
+}
+.item.on {
+  background: var(--surface);
+  border-left-color: var(--accent);
+}
+.item-glyph {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.item-glyph svg {
+  width: 15px;
+  height: 15px;
+}
+.item-kind {
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.item-title {
+  font-size: 0.92rem;
+  font-weight: 500;
+  margin: 0.05rem 0 0.15rem;
+  line-height: 1.35;
+}
+.item-meta {
+  color: var(--muted);
+  font-size: 0.8rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+.item-chev {
+  color: var(--faint);
+  align-self: center;
+}
+.dot {
+  color: var(--faint);
+}
+
+/* ── Detail pane ──────────────────────────────────────────────────────────── */
+/* The kind badge: the item's icon in a soft rounded tile, tinted
+   by kind, with the kind name as a quiet uppercase label beside it. */
+.kind-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  line-height: 0; /* svg baseline slack would nudge the glyph off-center */
+}
+.kind-label {
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-size: 0.72rem;
+  color: var(--faint);
+}
+.detail-top {
+  display: flex;
+  justify-content: space-between;
+  /* center, not baseline: the 32px kind tile made baseline alignment sit the text low. */
+  align-items: center;
+  color: var(--faint);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  gap: 10px;
+}
+.detail h2 {
+  font-size: 1.2rem;
+  line-height: 1.3;
+  margin: 0.3rem 0 0.5rem;
+}
+.detail-url {
+  display: inline-flex;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  word-break: break-all;
+  margin-bottom: 0.6rem;
+}
+.detail-section {
+  font-size: 0.7rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 1.1rem 0 0.5rem;
+}
+.detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  margin: 0.25rem 0 0.9rem; /* breathing room before the Note field below */
+}
+/* Tags/chips wrap to new lines and never clip; a chip stays intact on its own line. */
+.detail-tags .chip,
+.item-meta .chip {
+  white-space: nowrap;
+  overflow: visible;
+  max-width: 100%;
+}
+.snippet-box {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 0.6rem 0.7rem;
+  margin-bottom: 0.5rem;
+  background: var(--surface-2);
+}
+.snippet-box .sentiment {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0 0 0.3rem;
+}
+.snippet-box blockquote {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+.snippet-box .snippet-note {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin: 0.3rem 0 0;
+}
+
+/* ── Connections ──────────────────────────────────────────────────────────── */
+.connections {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.connection {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  color: var(--text);
+  padding: 0.3rem 0.35rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  min-width: 0;
+}
+.connection:hover {
+  background: var(--surface-2);
+}
+/* Direction-true rows: [src] [relation chip] → [dst], arrow ALWAYS right. */
+.connection-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: none;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  padding: 0;
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden; /* a long title ellipsizes instead of blowing the row open */
+  cursor: pointer;
+}
+.connection-end.self {
+  cursor: default;
+  /* Never shrinks. This end is ONLY an icon — it has no label to give up — so flex-shrink took
+     it out of the icon itself, and `.connection-end`'s overflow:hidden clipped the glyph to a
+     sliver instead of resizing it. That is the squashed book the owner reported, and it appears
+     exactly where the row is tight: a long question, or a long title plus a long relation chip
+     The other end keeps its shrink — its LABEL is what
+     should give, and it ellipsizes. */
+  flex: none;
+}
+button.connection-end:hover .connection-target {
+  text-decoration: underline;
+}
+/* The relation chip: WHITE (with a hint of purple) by default — the row
+   reads as plain English, no arrow. Clicking flips to the declared inverse reading, and the
+   reversed chip takes the UI's own background to say you're viewing the edge the other way. */
+.connection-chip {
+  display: inline-flex;
+  align-items: center;
+  background: #e4e1f0;
+  color: #23222f;
+  font: inherit;
+  font-size: 0.74rem;
+  line-height: 1.2;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.08rem 0.55rem;
+  white-space: nowrap;
+  flex: none;
+}
+button.connection-chip {
+  cursor: pointer;
+}
+button.connection-chip:hover {
+  background: #f0eefa;
+}
+.connection-chip.reversed {
+  background: var(--bg);
+  color: var(--text);
+  border-color: var(--line);
+}
+button.connection-chip.reversed:hover {
+  background: var(--surface-2);
+}
+/* The one-line add affordance inside Connections groups: dotted box
+   tinted the group's kind color; the flavor dropdown wears the chip look. */
+.connection-add {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px dashed color-mix(in srgb, var(--add-color, var(--line)) 55%, transparent);
+  border-radius: 8px;
+  padding: 0.3rem 0.45rem;
+  margin: 0.15rem 0 0.45rem;
+}
+/* An adder whose picker rendered nothing (e.g. already on every track) hides its whole box. */
+.connection-add:has(.connection-add-body:empty) {
+  display: none;
+}
+/* Collapsed until hover: the dotted box reads "+ add concept" until the
+   pointer is over it (or something inside holds focus), then expands into the full adder. */
+/* The journey's end-of-column adder wears the SAME dashed-outline skin as ConnectionAdd (06) — "+ new track" sat beside "+ add source" and "+ add concept" as a bare button,
+   which read as a different kind of control when it is the same gesture. Track-tinted here
+   because the one AddBox is the track adder; if it grows callers, the tint moves to them. */
+.add-box {
+  --add-color: var(--k-track);
+  display: flex;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  gap: 0.45rem;
+  background: none;
+  border: 1px dashed color-mix(in srgb, var(--add-color) 55%, transparent);
+  border-radius: 8px;
+  padding: 0.3rem 0.45rem;
+  margin: 0.15rem 0 0.45rem;
+  color: color-mix(in srgb, var(--add-color) 80%, var(--text));
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+.add-box:hover {
+  border-color: color-mix(in srgb, var(--add-color) 85%, transparent);
+}
+.add-box.open {
+  flex-direction: column;
+  align-items: stretch;
+  cursor: default;
+}
+.add-box.open input,
+.add-box.open textarea {
+  font: inherit;
+}
+
+.connection-add-label {
+  color: color-mix(in srgb, var(--add-color, var(--muted)) 80%, var(--text));
+  font-size: 0.76rem;
+  padding: 0.05rem 0.1rem;
+  cursor: pointer;
+}
+.connection-add:hover .connection-add-label,
+.connection-add:focus-within .connection-add-label {
+  display: none;
+}
+.connection-add:not(:hover):not(:focus-within) .connection-end.self,
+.connection-add:not(:hover):not(:focus-within) .connection-add-body {
+  display: none;
+}
+.connection-add-body {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 1;
+  min-width: 0;
+}
+.connection-add .anchor-picker {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0;
+  flex: 1;
+  min-width: 0;
+}
+.connection-add .picker-box {
+  flex: 1;
+  min-width: 0;
+}
+.connection-add .anchor-flavor {
+  appearance: none;
+  -webkit-appearance: none;
+  align-self: center;
+  background: #e4e1f0;
+  color: #23222f;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  line-height: 1.2;
+  padding: 0.12rem 0.55rem;
+  cursor: pointer;
+  flex: none;
+}
+/* Converse relation options: the flipped readings — "parent topic of",
+   "superfield of" — sit on a dark backdrop in the open list, so direction reads at a glance. */
+.anchor-flavor option.converse-opt {
+  background: #23222f;
+  color: #e4e1f0;
+}
+.connection-add .anchor-flavor:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.connection-group-label {
+  color: var(--faint);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0.4rem 0 0.1rem;
+}
+.connection-x {
+  background: none;
+  border: none;
+  color: var(--faint);
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 0 0.2rem;
+  flex: none;
+  visibility: hidden;
+}
+.connection:hover .connection-x {
+  visibility: visible;
+  color: var(--muted);
+}
+.connection-x:hover {
+  color: var(--danger);
+}
+.connection-target {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.connection svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+/* The kind icon never gives ground to a long label: it is a flex ITEM inside .connection-end
+   and would otherwise shrink like any other, while the label is the thing that should
+   ellipsize — it was the
+   SELF end, which is icon-only and so had nothing else to give; see `.connection-end.self`,
+   where the actual fix lives. This rule stands as the general form of the same invariant. */
+.connection-end > :first-child,
+.connection-end > :first-child > svg {
+  flex: none;
+}
+
+/* ── Track reading path (feedback round 3) ─────────────────────────────── */
+.track-path-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-weight: 500;
+  padding: 0.1rem 0;
+  width: 100%;
+  text-align: left;
+}
+.track-path-head svg {
+  width: 15px;
+  height: 15px;
+}
+.track-path {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0 0 0 0.5rem;
+  border-left: 1px solid var(--divider);
+}
+.path-source {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--muted);
+  padding: 0.28rem 0.4rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+.path-source:hover {
+  background: var(--surface-2);
+}
+.path-source.current {
+  background: var(--accent-bg);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+/* Track member titles WRAP: near-identical titles differ only in
+   their tails, so clipping hides exactly the distinguishing part. Number stays on line 1. */
+.track-path .connection-target {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+.track-path .path-source {
+  align-items: flex-start;
+}
+.track-path .path-num {
+  line-height: 1.55; /* optically centers the numeral on the title's first line */
+}
+.path-texts {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+.path-author {
+  font-size: 0.72rem;
+  color: var(--faint);
+}
+.fact-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 12.5px;
+  color: var(--text);
+  min-width: 0;
+}
+/* ── Controls that had lost their base rule ──────────────────
+   An element with no rule does not render "unstyled" — it renders the BROWSER's chrome, a
+   light ButtonFace box, and inherits this theme's near-white text onto it, so the label
+   vanishes into its own background. That is what "it gets greyed out" was: the pencils and
+   every picker option row. `test/ui-smoke/chrome.test.ts` now fails on any control left in
+   that state, because the failure is invisible to a test that only asks whether the element
+   is present. */
+
+/* A row whose text carries a trailing pencil. It must be a ROW: the track's goal wears
+   `detail-field title-row`, and .detail-field is a flex COLUMN, so with no rule here the
+   pencil dropped below the text and stretched the full width of the panel. */
+.title-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.35rem;
+}
+/* The pencil is a GHOST, not a button-shaped box — it surfaces when its row is hovered and
+   otherwise leaves the text alone. */
+.title-pencil {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.title-row:hover > .title-pencil,
+.title-pencil:focus-visible {
+  opacity: 1;
+}
+.title-pencil:hover {
+  color: var(--text);
+}
+
+/* The TEXT ellipsizes; the pencil sits OUTSIDE the overflow so a 100-author list can't
+   clip it away. */
+.fact-value-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.fact-value .title-pencil {
+  flex: none;
+  opacity: 1; /* the base pencil hides until .title-row:hover — no such parent here, so it
+                 was permanently invisible */
+}
+.kind-badge-btn {
+  cursor: pointer;
+  padding: 0;
+}
+.kind-badge-btn:hover {
+  border-color: var(--accent);
+}
+.fact-empty {
+  color: var(--faint);
+}
+.fact-link {
+  color: var(--accent-soft);
+  text-decoration: none;
+}
+.fact-link:hover {
+  text-decoration: underline;
+}
+.path-num {
+  color: var(--faint);
+  font-size: 0.78rem;
+  width: 1.6em;
+  flex: none;
+  text-align: right;
+  /* tabular digits: every numeral the same width, so 1–99 all align (Inter's default
+     proportional digits made the narrow '1' float right of its column). */
+  font-variant-numeric: tabular-nums;
+}
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--accent-soft);
+  padding: 0;
+  font-size: 0.85rem;
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  margin-top: 0.9rem;
+}
+.detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+/* Both shapes: the WRAPPER holding a field, and an input carrying the class itself (the
+   registry-url box). Without the second half that input matched no rule at all and rendered in
+   the browser's own light chrome. */
+.detail-field input,
+.detail-field select,
+.detail-field textarea,
+input.detail-field,
+select.detail-field,
+textarea.detail-field {
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+}
+.detail-field textarea {
+  resize: vertical;
+  min-height: 3.2em;
+  line-height: 1.4;
+  white-space: pre-wrap; /* the note wraps inside the box instead of scrolling on one line */
+  overflow-wrap: anywhere;
+}
+/* Displayed note text (source detail's snippet list) wraps too. */
+.snippet-note {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.detail-field input:disabled {
+  opacity: 0.5;
+}
+.detail-actions {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  margin-top: 0.8rem;
+}
+/* Nocturne: primary actions are an accent OUTLINE on transparent, never a flood. */
+.action {
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: var(--accent-soft);
+  font-weight: 500;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.85rem;
+}
+.action:hover {
+  background: var(--accent-bg);
+}
+.action.subtle {
+  border-color: var(--line);
+  color: var(--text);
+  font-weight: 400;
+}
+.action:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.remove {
+  background: none;
+  border: none;
+  color: var(--faint);
+  padding: 0 0.25rem;
+}
+.remove:hover {
+  color: var(--danger);
+}
+/* Icon + label inline (sentiment display) */
+.sentiment-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.sentiment-tag svg,
+.connection svg,
+.item-glyph svg,
+.track-path-head svg,
+.detail-url svg {
+  flex: none;
+}
+
+/* Custom dropdown (sentiment picker) */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+.dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 0.3rem 0.55rem;
+  font-size: 0.9rem;
+  min-width: 150px;
+  justify-content: space-between;
+}
+.dropdown-trigger:hover {
+  border-color: var(--line-strong);
+}
+.dropdown-placeholder {
+  color: var(--faint);
+}
+.dropdown-menu {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 100%;
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+.dropdown-opt {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text);
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+.dropdown-opt:hover {
+  background: var(--surface-2);
+}
+.dropdown-opt.on {
+  color: var(--accent-soft);
+  background: var(--accent-bg);
+}
+.dropdown-opt.clear {
+  color: var(--faint);
+  border-top: 1px solid var(--divider);
+  border-radius: 0;
+  margin-top: 0.15rem;
+}
+
+/* ── Toast ────────────────────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 1.2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 0.55rem 1rem;
+  display: flex;
+  gap: 0.9rem;
+  align-items: center;
+  /* Above the settings scrim (200) — the framework editor lives there and its toasts were
+     rendering behind the blur. */
+  z-index: 300;
+  font-size: 0.88rem;
+}
+.link {
+  background: none;
+  border: none;
+  color: var(--accent-soft);
+  padding: 0;
+}
+
+/* ── Journey: the column browser (wireframe 1c) ───────────────────────────── */
+.journey {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.journey-head {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.7rem 1.1rem;
+  border-bottom: 1px solid var(--divider);
+  flex: 0 0 auto;
+}
+.journey-head h2 {
+  font-size: 1rem;
+}
+.breadcrumb {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.crumb.current {
+  color: var(--accent-soft);
+}
+.crumb-sep {
+  color: var(--faint);
+}
+.journey-cols {
+  display: grid;
+  /* Inline style sets the live template (resizable columns); this is the
+     no-JS fallback shape. */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.journey-cols .resizer {
+  height: 100%;
+}
+/* With resizers between columns, the RESIZER is the one divider — the columns' own
+   border-right would double the line. */
+.journey-cols .journey-col {
+  border-right: none;
+}
+.journey-cols .resizer::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--divider);
+}
+.journey-col {
+  border-right: 1px solid var(--divider);
+  overflow-y: auto;
+  padding: 0.5rem 0;
+  min-width: 0;
+}
+/* The reading column renders a TrackSection (section headers, pickers, rows) that otherwise
+   run edge-to-edge; give it breathing room from the rail so nothing hugs the divider or fills
+   the full width. */
+.journey-col.reading-col {
+  padding-left: 0.85rem;
+  padding-right: 0.85rem;
+}
+.journey-col:last-child {
+  border-right: none;
+}
+.journey-col .hint {
+  padding: 0.6rem 0.9rem;
+}
+.col-head {
+  font-size: 0.68rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding: 0.5rem 0.9rem 0.35rem;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+}
+.col-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-left: 2px solid transparent;
+  color: var(--text);
+  padding: 0.5rem 0.9rem;
+}
+.col-row:hover {
+  background: var(--surface-2);
+}
+.col-row.on {
+  background: var(--surface);
+  border-left-color: var(--accent);
+}
+/* Cross-highlight: a snippet/question's relation to the focused item. */
+.col-row.rel-raised {
+  border-left-color: var(--raised);
+  background: color-mix(in srgb, var(--raised) 12%, transparent);
+}
+.col-row.rel-answered {
+  border-left-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+}
+.col-row-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+.col-row-title svg {
+  flex: none;
+}
+.col-row-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin-top: 0.2rem;
+  padding-left: 1.2rem;
+}
+.col-row-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+  padding-left: 1.2rem;
+}
+.detail-col {
+  padding: 0.5rem 0.2rem;
+}
+.leaf-quote {
+  margin: 0.4rem 0.9rem;
+  font-style: italic;
+  line-height: 1.45;
+}
+.leaf-question {
+  margin: 0.4rem 0.9rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.leaf-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0.3rem 0.9rem;
+}
+.detail-col .sentiment,
+.detail-col .snippet-note {
+  margin: 0.3rem 0.9rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.leaf-link {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text);
+  padding: 0.35rem 0.9rem;
+  font-size: 0.88rem;
+}
+.leaf-link:hover {
+  background: var(--surface-2);
+  color: var(--accent-soft);
+}
+.leaf-link svg {
+  flex: none;
+}
+.leaf-open {
+  display: block;
+  background: none;
+  border: none;
+  color: var(--accent-soft);
+  padding: 0.6rem 0.9rem;
+  font-size: 0.85rem;
+}
+
+/* Journey: legend, source/snippet badges, and the grey add box */
+.edit-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--muted);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.82rem;
+}
+.edit-toggle.on {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--accent-soft);
+}
+.tracked-concepts .chip:disabled {
+  cursor: default;
+}
+/* Declared-taxonomy chips (⊂ subfield-of / ∈ topic-of) read in the concept hue. */
+.chip.tag-subfieldof,
+.chip.tag-topicof {
+  color: var(--k-concept);
+  border-color: color-mix(in srgb, var(--k-concept) 40%, transparent);
+  background: color-mix(in srgb, var(--k-concept) 10%, transparent);
+  white-space: nowrap;
+}
+.chip.tag-seminal {
+  color: var(--raised);
+  border-color: color-mix(in srgb, var(--raised) 50%, var(--chip-border));
+  background: color-mix(in srgb, var(--raised) 12%, var(--chip-bg));
+}
+.consume-check {
+  display: inline-flex;
+  color: var(--faint);
+  cursor: pointer;
+}
+.consume-check:hover {
+  color: var(--ok);
+}
+.row-title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.open-questions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  color: var(--raised);
+  margin-left: auto;
+  font-size: 0.78rem;
+}
+/* Consumed-progress bar on a track row. */
+.track-progress {
+  display: block;
+  height: 3px;
+  margin: 0.35rem 0 0 1.2rem;
+  border-radius: 2px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.track-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--ok);
+  transition: width 0.25s ease;
+}
+/* ── Map ──────────────────────────────────────────────────────────────────── */
+.map {
+  position: relative;
+  overflow: hidden;
+}
+.map svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.map-legend {
+  position: absolute;
+  top: 0.7rem;
+  left: 0.9rem;
+  display: flex;
+  gap: 0.9rem;
+  font-size: 0.76rem;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--divider);
+}
+.map-legend .swatch {
+  margin-right: 0.3rem;
+}
+/* The way out of a scoped view: top-right, and nothing but the way out —
+   naming what you narrowed to was a sentence the canvas already shows you. */
+.map-scope-clear {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  z-index: 2;
+  font: inherit;
+  font-size: 0.74rem;
+  cursor: pointer;
+  color: var(--accent-soft);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0.2rem 0.75rem;
+}
+.map-scope-clear:hover {
+  background: var(--surface);
+}
+
+/* The compactness dial: down = tight (the default), up = the loose layout of old. */
+.map-spread {
+  position: absolute;
+  right: 1.1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+.map-dial {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+.map-spread span {
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.map-spread input[type='range'] {
+  writing-mode: vertical-lr;
+  -webkit-appearance: slider-vertical;
+  appearance: slider-vertical;
+  width: 6px;
+  height: 130px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.map-hint {
+  position: absolute;
+  bottom: 0.7rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.76rem;
+  color: var(--faint);
+}
+.map-zoom {
+  position: absolute;
+  bottom: 0.7rem;
+  right: 0.9rem;
+  display: flex;
+  gap: 0.3rem;
+}
+.map-zoom button {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  width: 26px;
+  height: 26px;
+}
+.node-label {
+  font-size: 10px;
+  fill: var(--muted);
+  /* Clickable (the label is part of the entity) — pointer-events:none here
+     would silently disable the text's own select/drag/hover handlers. */
+  pointer-events: auto;
+  user-select: none;
+}
+.node-label.selected {
+  fill: var(--text);
+}
+/* Entity hover: the full title, raised and haloed so it reads over
+   whatever it now overlaps; its connections heat up alongside, each with its word. */
+.node-label.hover {
+  fill: var(--text);
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: var(--bg);
+  stroke-width: 3.5px;
+}
+.edge-label {
+  font-size: 10px;
+  fill: var(--text);
+  pointer-events: none;
+  paint-order: stroke; /* dark outline so the label stays legible over edges */
+  stroke: var(--bg);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+/* Chromeless embed mode (#…&embed): the single view fills the iframe. */
+.app.embed .pane.map {
+  flex: 1;
+  min-width: 0;
+  border: none;
+}
+
+/* ── The publication page (/t/<id>) — a document, not the workbench ─────────────────────── */
+/* The page's own scroller (the sticky map). It already declared
+   overflow-y:auto, but with min-height it grew to fit its content and never actually scrolled:
+   the DOCUMENT scrolled instead, while `.pub` still counted as the containing block for
+   anything sticky inside it. A definite height makes it the scroller it claimed to be. */
+.pub {
+  height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  overflow-y: auto;
+}
+.pub-doc {
+  max-width: 760px;
+  margin: 0 auto;
+  /* The frozen header owns the top of the page now, so the document starts right under it.
+     Half the air it had between the title and the description. */
+  padding: 0 24px 80px;
+}
+.pub-missing {
+  color: var(--muted);
+  text-align: center;
+  padding-top: 15vh;
+}
+/* The kicker is a bar, not a line: the eyebrow on the left, the fork action on the right
+ — the repo-header shape the track/PR framing implies. */
+.pub-kicker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-soft);
+  margin-bottom: 10px;
+}
+/* Whose page this is, top left — the ask page's brand, same mark and size (05). */
+.pub-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  font-weight: 500;
+  font-size: 17px;
+}
+.pub-brand svg {
+  flex: none;
+  color: var(--accent);
+}
+.pub-fork.top {
+  margin-left: auto; /* the brand holds the left corner; fork + account hold the right */
+  margin-right: 0;
+  flex: none;
+  letter-spacing: 0.06em;
+  padding: 0.2rem 0.75rem;
+}
+.pub-head h1 {
+  margin: 0 0 10px;
+  font-size: 32px;
+  line-height: 1.2;
+}
+.pub-goal {
+  color: var(--muted);
+  font-size: 16px;
+  /* No margin: the line's own leading already sets the description off from the byline, and
+     the 14px on top of it was twice the gap the owner wanted. */
+  margin: 0;
+}
+.pub-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  color: var(--faint);
+  font-size: 13px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--divider);
+}
+.pub-license {
+  color: var(--accent-soft);
+}
+.pub section {
+  margin-top: 36px;
+}
+.pub h2 {
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 14px;
+}
+.pub-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+/* Collapsible section headings — click folds the section. */
+.pub h2.pub-h2-toggle {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.pub .pub-caret {
+  color: var(--faint);
+  flex: none;
+}
+.pub-tie-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.pub-chip {
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-border);
+  color: var(--k-concept);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 13px;
+}
+.pub-level {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.pub-level-n {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent-bg);
+  color: var(--accent-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 14px;
+}
+.pub-level-sources {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pub-source {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+}
+.pub-source h3 {
+  margin: 0 0 6px;
+  font-size: 17px;
+}
+.pub-source h3 a {
+  color: var(--text);
+  text-decoration: none;
+}
+.pub-source h3 a:hover {
+  color: var(--accent-soft);
+}
+.pub-src-meta {
+  color: var(--faint);
+  font-size: 13px;
+}
+.pub-snippet {
+  margin: 14px 0 0;
+  padding: 10px 16px;
+  border-left: 3px solid var(--k-snippet);
+  background: var(--surface-2);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+.pub-snippet p {
+  margin: 0;
+  font-style: italic;
+  color: var(--text);
+}
+.pub-tie {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  margin-top: 8px;
+  color: var(--muted);
+}
+.pub-tie-badge {
+  flex: none;
+  border-radius: 999px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+.pub-tie-raises .pub-tie-badge {
+  color: var(--k-question);
+  background: color-mix(in srgb, var(--k-question) 14%, transparent);
+}
+.pub-tie-answers .pub-tie-badge {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+}
+.pub-questions {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--text);
+}
+.pub-questions li {
+  margin-bottom: 6px;
+}
+.pub-foot {
+  margin-top: 48px;
+  padding-top: 16px;
+  border-top: 1px solid var(--divider);
+  color: var(--faint);
+  font-size: 13px;
+}
+.pub-foot a {
+  color: var(--accent-soft);
+}
+.pub-foot code {
+  background: var(--chip-bg);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.pub-signed {
+  color: var(--ok);
+}
+
+/* Publishing section on the track detail. */
+.publish-box {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.publish-state {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.publish-live {
+  color: var(--ok);
+}
+.publish-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.publish-stop {
+  color: var(--danger);
+}
+.publish-go {
+  color: var(--ok);
+}
+.publish-terms {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.publish-license {
+  width: 150px;
+  font-size: 12.5px;
+}
+
+/* A standing-excluded tag chip (off → include → exclude → off; exclusion persists). */
+.chip.excluded {
+  opacity: 0.55;
+  text-decoration: line-through;
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+}
+
+/* Inline concept creation in the list head (shown while browsing Concepts). */
+.list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.list-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.list-add input {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12.5px;
+  padding: 3px 8px;
+  width: 150px;
+}
+.list-add input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Kind glyphs in the Browse rail rows. */
+.browse-glyph {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 8px;
+  color: var(--muted);
+}
+.browse-row > span:nth-child(2) {
+  flex: 1;
+  text-align: left;
+}
+
+/* The concept-anchor editor on source/snippet details. */
+.anchor-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+/* .link-btn's blanket 0.9rem top margin (detail-pane action rows) breaks the flex centering
+   of + Add / + Link next to their inputs — inside these rows the row aligns, not the margin.
+   Same for an action row's own Cancel, which sat 0.9rem below the Create beside it (a
+   report). */
+.anchor-add .link-btn,
+.list-add .link-btn,
+.detail-actions .link-btn {
+  margin-top: 0;
+}
+.anchor-add select,
+.anchor-add input {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12.5px;
+  padding: 3px 8px;
+}
+.anchor-add input {
+  flex: 1;
+  min-width: 0;
+}
+.anchor-add input:focus,
+.anchor-add select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* The remove-× on relation chips (span inside the chip button; button.chip-x is the tag form). */
+.chip .chip-x {
+  margin-left: 6px;
+  opacity: 0.5;
+  cursor: pointer;
+}
+.chip .chip-x:hover {
+  opacity: 1;
+  color: var(--danger);
+}
+
+/* The snippet-markdown contract's math tokens — GitHub-style:
+   math is TYPOGRAPHY, not a box. A math-capable serif stack, no backgrounds, display blocks
+   centered with breathing room. (KaTeX typesetting remains the documented opt-in.) */
+.md-math {
+  font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', 'Georgia', serif;
+  font-style: italic;
+  font-size: 1.06em;
+  padding: 0 1px;
+}
+/* KaTeX-typeset math (the real renderer; .md-math styles below are the fallback path). */
+.md-katex .katex {
+  font-size: 1.06em;
+}
+.md-katex-display {
+  display: block;
+  text-align: center;
+  margin: 8px 0;
+  overflow-x: auto;
+  /* A scrollbar you can SEE. The overflow was already scrollable, but the platform's overlay
+     scrollbars stay invisible until touched, so a formula wider than its box read as truncated —
+     "P(R = r | Y = q, A = a) = P(R = r | Y = q, A" and then nothing.
+     Declaring scrollbar-color opts Chromium out of overlay bars, so the affordance is drawn
+     whenever there is something to scroll to, and nothing when there isn't. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+  /* …and an edge shadow that appears ONLY when there is more formula in that direction. The two
+     `local` layers scroll WITH the content and mask the two `scroll` layers pinned to the box,
+     so a shadow shows exactly when that end is off-screen — no JS, and no fade on formulas that
+     already fit. `--math-bg` must match whatever the formula sits on, or the mask leaves a band;
+     each container that holds math sets it. */
+  --math-bg: var(--surface-2);
+  background:
+    linear-gradient(to right, var(--math-bg) 55%, transparent) 0 0 / 26px 100% no-repeat local,
+    linear-gradient(to left, var(--math-bg) 55%, transparent) 100% 0 / 26px 100% no-repeat local,
+    linear-gradient(to right, color-mix(in srgb, var(--text) 30%, transparent), transparent) 0 0 / 18px 100% no-repeat scroll,
+    linear-gradient(to left, color-mix(in srgb, var(--text) 30%, transparent), transparent) 100% 0 / 18px 100% no-repeat scroll;
+}
+/* The backdrops math actually appears on. */
+.snippet-box .md-katex-display,
+.snippet-display .md-katex-display {
+  --math-bg: var(--surface-2);
+}
+.agraph-q .md-katex-display,
+.pub .agraph-box .md-katex-display {
+  --math-bg: var(--surface);
+}
+.md-katex-display .katex-display {
+  margin: 0; /* our rhythm, not KaTeX's 1em default */
+}
+.md-katex-display .katex {
+  font-size: 1.12em;
+}
+.md-math-block {
+  font-family: 'STIX Two Math', 'Cambria Math', 'Latin Modern Math', 'Georgia', serif;
+  font-style: italic;
+  font-size: 1.18em;
+  text-align: center;
+  padding: 0;
+  margin: 8px 0;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+.md-p {
+  margin: 0 0 6px;
+}
+.md-p:last-child {
+  margin-bottom: 0;
+}
+.md-list {
+  margin: 0 0 6px;
+  padding-left: 18px;
+}
+
+/* Display math encountered mid-paragraph (single-newline captures) — same centered block
+   presentation, without invalid div-in-p nesting. */
+.md-math.md-math-display {
+  display: block;
+  font-size: 1.18em;
+  text-align: center;
+  padding: 0;
+  margin: 8px 0;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
+/* ![alt](url) images (image-capture adapter): inline media sized to its container; a
+   paragraph that IS an image renders as a centered figure; one-line rows and public pages
+   get chip/link stand-ins instead of media. */
+.md-img {
+  max-width: 100%;
+  max-height: 420px;
+  border-radius: var(--radius-sm);
+  vertical-align: middle;
+}
+.md-img-block {
+  text-align: center;
+  margin: 8px 0;
+}
+.md-img-mini {
+  height: 1.45em;
+  max-width: 4.5em;
+  object-fit: contain;
+  vertical-align: -0.4em;
+  border-radius: 3px;
+}
+/* Clickable images: pointer + fullscreen fills the screen letterboxed. */
+.md-img-zoom {
+  cursor: zoom-in;
+}
+.md-img-zoom:fullscreen {
+  cursor: zoom-out;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+  background: #000;
+}
+.md-img-link {
+  color: var(--accent-soft);
+  text-decoration: none;
+}
+.md-img-link:hover {
+  text-decoration: underline;
+}
+
+/* Track member rows: the remove-× appears on hover, quiet otherwise. */
+.path-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.path-row .path-source {
+  flex: 1;
+  min-width: 0;
+}
+.path-x {
+  background: none;
+  border: none;
+  color: var(--faint);
+  font-size: 1em;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 999px;
+  opacity: 0;
+}
+.path-row:hover .path-x {
+  opacity: 1;
+}
+.path-move {
+  display: inline-flex;
+  flex: none;
+}
+.path-x:disabled {
+  opacity: 0 !important;
+  cursor: default;
+}
+.path-x:hover {
+  color: var(--danger);
+}
+
+/* Sentiment as a mutually-exclusive button row: icon + word
+   pills, one active; clicking the active one clears. */
+.sent-seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.sent-seg button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  padding: 0.18rem 0.65rem;
+}
+.sent-seg button:hover {
+  border-color: var(--line-strong);
+}
+.sent-seg button.on {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent-soft);
+}
+
+/* Source facts (author + type) on the source detail — quiet label/value rows. */
+.source-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0 8px;
+}
+/* Fact rows align on a shared auto-width label column (the fixed 84px
+   right-aligned column read as a bad indent on "BY"). Grid: labels take their natural width,
+   values line up in the second column. */
+.source-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 10px;
+  row-gap: 4px;
+  align-items: baseline;
+}
+.fact-row {
+  display: contents;
+}
+.fact-label {
+  color: var(--faint);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: left;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.fact-row input,
+.fact-row select {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12.5px;
+  padding: 3px 8px;
+  min-width: 0;
+}
+.fact-row input {
+  flex: 1;
+}
+.fact-row input:focus,
+.fact-row select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Read toggle in the detail-top: quiet pill, green when read. */
+.read-toggle {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  padding: 1px 9px;
+  white-space: nowrap;
+  /* buttons don't inherit the header's casing — match it explicitly */
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.read-toggle:hover {
+  border-color: var(--line-strong);
+}
+.read-toggle.on {
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 45%, var(--line));
+}
+.modality-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pub-track-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--k-track);
+  flex: none;
+  vertical-align: middle;
+  line-height: 0;
+}
+.pub-src-icon {
+  color: var(--k-source);
+  margin-right: 0.4rem;
+  vertical-align: -2px;
+  line-height: 0;
+  display: inline-flex;
+}
+/* The map takes the WHOLE content column: it used to be indented to line
+   up with the old numbered source cards, which left it visibly short of the right edge. */
+.pub-map-wrap {
+  position: relative;
+}
+/* An EXPLICIT height, not a max: the fit-to-content viewBox
+   measures this element's aspect, so its box must be set by layout rather than derived from
+   the viewBox it feeds. */
+.pub-map {
+  width: 100%;
+  height: min(400px, 46vh);
+  /* The page's own ground: the map is part of the page, not a well cut
+     into it — the border alone marks its edge. */
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+/* Fullscreen map: the wrapper fills the screen, the SVG takes all of it. */
+.pub-map-wrap:fullscreen {
+  margin: 0;
+  background: var(--bg);
+  display: flex;
+}
+.pub-map-wrap:fullscreen .pub-map {
+  max-height: none;
+  height: 100%;
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 0;
+}
+.pub-map-zoom {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+}
+.pub-map-zoom button {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+}
+.pub-map-zoom button:hover {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+.pub-map-edge {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+  opacity: 0.7;
+}
+.pub-map-edge.prereq {
+  stroke: var(--accent);
+  stroke-dasharray: 4 3;
+}
+.pub-map-node.track { fill: var(--k-track); }
+.pub-map-node.concept { fill: var(--k-concept); }
+.pub-map-node.source { fill: var(--k-source); }
+.pub-map-node.question { fill: var(--k-question); }
+.pub-map-node.snippet { fill: var(--k-snippet); }
+/* TrackMap's ask-page hooks: DASHED = pending/needs, color
+   stays reserved for KIND. A flagged concept is a dashed teal diamond waiting to be filled
+   (+ the amber breathing halo for attention); a recommendation is a dashed purple circle —
+   a source, just not confirmed into the track yet. Inert unless the props are passed. */
+.pub-map-node.flagged { fill: color-mix(in srgb, var(--k-concept) 16%, var(--bg)); stroke: var(--k-concept); stroke-width: 1.5; stroke-dasharray: 3 2.2; }
+.pub-map-node.accent { fill: color-mix(in srgb, var(--k-source) 16%, var(--bg)); stroke: var(--k-source); stroke-width: 1.5; stroke-dasharray: 3 2.2; }
+.pub-map-halo { fill: none; stroke: var(--raised); animation: pub-halo-breathe 2.4s ease-in-out infinite; }
+@keyframes pub-halo-breathe { 0%, 100% { stroke-width: 0; opacity: 0; } 50% { stroke-width: 5; opacity: 0.35; } }
+.pub-src-concepts.foot {
+  margin-top: 0.6rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--divider);
+}
+.pub-h2-icon {
+  vertical-align: -2px;
+  margin-right: 0.3rem;
+  color: var(--k-track);
+}
+.pub-map-label {
+  fill: var(--muted);
+  font-size: 9.5px;
+  text-anchor: middle;
+}
+
+.pub-fork {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent-soft);
+  font-size: 0.85rem;
+  padding: 0.25rem 0.9rem;
+  margin-right: 0.8rem;
+}
+.pub-fork:hover {
+  background: color-mix(in srgb, var(--accent) 28%, var(--bg));
+}
+.pub-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.registry-row {
+  margin-top: 4px;
+}
+.registry-url {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+}
+
+/* The raw-source toggle on snippet details (view + copy; text is identity, never edited here). */
+.raw-toggle.on {
+  color: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: var(--accent-bg);
+}
+.raw-md {
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin: 0 0 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+}
+
+/* The raw view is an editor now (edit-by-supersession on save). */
+textarea.raw-edit {
+  width: 100%;
+  resize: vertical;
+}
+textarea.raw-edit:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Snippet detail: the passage as readable prose, not a heading (bigger than body, not thick). */
+.snippet-display {
+  font-size: 1.06rem;
+  line-height: 1.7;
+  font-weight: 400;
+  color: var(--text);
+  margin: 2px 0 10px;
+}
+.snippet-display .md-p {
+  margin: 0 0 10px;
+}
+
+/* Create-in-detail buttons (Library list head): one boxed '+ <icon> <kind>' per creatable
+   kind. Font and colour match a browse-view item row; a literal box wraps each. */
+.list-new {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+.new-draft {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+  text-transform: capitalize;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.2rem 0.5rem;
+}
+.new-draft:hover {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+.new-draft .new-draft-plus {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 1rem;
+  line-height: 1;
+}
+.new-draft svg {
+  color: var(--muted);
+}
+
+/* Draft form (create-in-detail for identity-named concept/question/snippet). */
+.draft-form .draft-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  margin-bottom: 1rem;
+}
+.draft-form .draft-icon {
+  display: inline-flex;
+}
+
+/* Concept chips on a source row in Journey's concept lens (source-anchored tracks). */
+.cchip-lite {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72em;
+  color: var(--k-concept);
+  border: 1px solid color-mix(in srgb, var(--k-concept) 40%, transparent);
+  background: color-mix(in srgb, var(--k-concept) 10%, transparent);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+  white-space: nowrap;
+}
+
+/* The unified track view: a concept heading plus its flag, side by side. */
+.rail-topic-headrow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.rail-topic-headrow > .rail-topic-head {
+  width: auto;
+}
+
+/* The step number sits INSIDE the row's hover box. It used to hang left into the gutter
+   (margin-left: -1.05rem), which was invisible while the marker was a bare numeral but read as
+   a circle falling out of the box once it gained a border. Titles
+   still line up down the whole track view without the hang, because every row reserves this
+   same slot whether it is numbered or not — an unnumbered one just drops its border. */
+.rail-topic-source > .rail-topic-n.step {
+  flex: 0 0 auto;
+  margin-top: 0.2em;
+}
+
+/* A track's header where a track's contents are shown inside another page (a source detail):
+   the track's name, and the × that leaves it. */
+.track-section-head {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.track-section-head > .track-link {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 0.88rem;
+  color: var(--text);
+}
+
+/* A source title can be long, and the flag names one — let it wrap beside the heading rather
+   than running off the rail (the short spine flag still fits on one line). */
+.rail-topic-headrow {
+  flex-wrap: wrap;
+}
+
+/* A concept in the hierarchy that nothing is tied to yet — present so it can be seen and
+   dropped onto, dimmed so it doesn't read as a source's tie. */
+.outline-cchip.empty {
+  opacity: 0.55;
+  border-style: dashed;
+}
+.outline-cchip.empty:hover {
+  opacity: 1;
+}
+
+/* A tie chip that can be cut: the concept's name, then a × for "no longer about this". */
+.outline-cchip.tie {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding-right: 0.2rem;
+}
+.outline-cchip.tie > .cchip-label {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+}
+.outline-cchip.tie > .cchip-x {
+  background: none;
+  border: none;
+  color: var(--faint);
+  font-size: 0.95em;
+  line-height: 1;
+  padding: 0 0.15rem;
+  opacity: 0;
+}
+.outline-cchip.tie:hover > .cchip-x {
+  opacity: 1;
+}
+.outline-cchip.tie > .cchip-x:hover {
+  color: var(--danger);
+}
+
+/* The candidate pool under a concept: sources ABOUT it that aren't on the track. Collapsed to
+   a count by default (fan-out safety — a concept 500 sources explain must stay one line). */
+.rail-candidates {
+  padding: 0.1rem 0 0.2rem 1.15rem;
+}
+
+/* The × that removes an included concept from the track — reveals on hovering its heading row
+   (the top-level concepts live only in this section now, not as chips above). */
+.rail-topic-headrow .concept-x {
+  flex: 0 0 auto;
+}
+.rail-topic:hover .rail-topic-headrow .concept-x {
+  opacity: 1;
+}
+
+/* Breathing room between the "include a concept…" row and where the concept listing starts
+   (they were too close). */
+.concept-adder-slot {
+  margin-bottom: 0.7rem;
+}
+
+/* Space between the uncategorized sources and the "add a source" row. */
+.spine-footer-slot {
+  margin-top: 0.55rem;
+}
+
+/* Topic-concept chips on a list card: a compact row under the meta line. */
+.item-concepts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+.outline-cchip.mini {
+  font-size: 0.68rem;
+  padding: 0.01rem 0.4rem;
+  color: var(--k-concept);
+  border-color: color-mix(in srgb, var(--k-concept) 35%, transparent);
+}
+.item-concepts-more {
+  font-size: 0.68rem;
+  color: var(--faint);
+  align-self: center;
+}
+
+/* The row × that removes a source from the track — sits at the row's trailing edge, revealed
+   on hovering the row. Distinct from the tie chip's inner ×. */
+.rail-topic-source > .row-remove-x {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin-top: 0.1em;
+}
+.rail-topic-source:hover > .row-remove-x {
+  opacity: 1;
+}
+
+/* The unified "add" box across the track view — a purple accent box with a dropdown + Add,
+   matching the Journey add affordances. */
+/* The unified add box — a purple bar that opens into a palette of icon boxes (23): source-add, add-to-track, candidates, and the concept adder all share it. */
+.picker-box {
+  position: relative;
+  margin: 0.35rem 0;
+}
+.picker-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 0.45rem 0.6rem;
+  cursor: pointer;
+}
+.picker-trigger:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.picker-caret {
+  color: var(--faint);
+  font-size: 0.72rem;
+}
+/* Single-choice mode: the trigger NAMES the current pick. */
+.picker-placeholder.chosen {
+  color: var(--text);
+}
+/* The published Questions tab's anchor pickers — two palettes and Send in one row. */
+.pubt-anchors {
+  align-items: flex-start;
+}
+.pubt-anchors .picker-box {
+  flex: 1;
+  margin: 0;
+}
+/* The open list of source boxes — the Journey "drag in existing sources" palette look. */
+.picker-list {
+  margin-top: 0.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+/* Only the options scroll; the search input and the Add footer stay pinned so a multiselect
+   is always committable. */
+.picker-options {
+  max-height: 13rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+/* A picker's option rows. The layout rule below always existed; the COLOURS lived only in
+   :hover and .selected, so a resting row was browser chrome with invisible text. */
+.palette-item {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.3rem 0.5rem;
+}
+.picker-list .palette-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  margin: 0;
+  text-align: left;
+  cursor: pointer;
+}
+.picker-list .palette-item:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.picker-search {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.35rem 0.5rem;
+  margin-bottom: 0.1rem;
+}
+.picker-search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.picker-list .palette-item.create {
+  color: var(--accent-soft);
+  border-style: dashed;
+}
+/* The create row's optional url field (source picker) — a link, or leave blank for a book. */
+.picker-create-url {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 0.3rem 0.5rem;
+  margin-top: 0.15rem;
+}
+.picker-create-url:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+/* Multiselect palette: a check column, a selected highlight, and the
+   footer Add button that commits the batch. */
+.palette-check {
+  flex: 0 0 1rem;
+  color: var(--accent);
+  font-size: 0.8rem;
+  text-align: center;
+}
+.picker-list .palette-item.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface-2));
+  color: var(--text);
+}
+.picker-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.15rem;
+}
+.picker-add-btn {
+  background: none;
+  border: none;
+  color: var(--accent-soft);
+  font-size: 0.85rem;
+  padding: 0.2rem 0.4rem;
+  cursor: pointer;
+}
+.picker-add-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Anchor/tie rows (source/snippet concepts, question ties): a small flavor select above the
+   purple picker, so these match the track pickers. */
+.anchor-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+.anchor-flavor {
+  align-self: flex-start;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: 0.8rem;
+  padding: 0.2rem 0.4rem;
+}
+.anchor-flavor:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.anchor-picker .picker-box {
+  margin: 0;
+}
+
+/* Compact track links on a source page — "which tracks am I in", not the
+   full reading lists. */
+.source-tracks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-bottom: 0.4rem;
+}
+.source-track {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.source-track > .track-link {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 0.9rem;
+  color: var(--text);
+  margin-top: 0;
+}
+.source-track-tag {
+  font-size: 0.7rem;
+  color: var(--faint);
+  border: 1px solid var(--chip-border);
+  border-radius: 999px;
+  padding: 0.02rem 0.4rem;
+}
+
+/* Pinned detail rails: Ctrl/⌘+click pins an entity's detail as an
+   extra far-right rail, up to four, each with its own close. */
+/* NOT the scroller. This wrapper used to scroll, which left the
+   `.pane.detail` inside it as tall as its own content — so the sticky header had no distance to
+   travel and did not freeze, while the same component in the main rail did. The wrapper owns the
+   border and the column; the pane inside owns the scrolling, exactly as it does unwrapped. Same
+   failure the publication map once had: a sticky element can only travel as far as its
+   own parent. */
+.pinned-rail {
+  position: relative;
+  border-left: 1px solid var(--divider);
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  overflow: hidden;
+}
+/* Centred by construction: the glyph used to sit wherever inline layout
+   put it, which in a 20px circle with a border left it visibly off-centre. */
+.pinned-x {
+  flex: none;
+  margin-left: 0.35rem;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+}
+.pinned-x svg {
+  display: block;
+}
+.pinned-x:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+/* The kind meta under the header row. */
+/* ── The rail's frozen identity and its frozen exit ──────────────────
+   `.pane` is the scroller and `.detail` pads it, so a sticky child sits inset by that padding
+   and lets content scroll through the gutters beside it. Each block therefore takes the pane's
+   padding over as its OWN — negative side margins to reach the edges, and the pane gives up the
+   padding on the edge it pins to.
+
+   That handover is why the padding moves rather than being cancelled by a negative margin: a
+   sticky element is held by its MARGIN box, so `margin-top: -1.1rem` parked the header 1.1rem
+   DOWN the scrollport and let a strip of content ride above it. */
+.pane.detail:has(> .detail-head-stick) {
+  padding-top: 0;
+}
+.pane.detail:has(> .detail-foot-stick) {
+  padding-bottom: 0;
+}
+.detail-head-stick {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--bg);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--divider);
+}
+/* The way OUT of an entity stays reachable from anywhere inside it, instead of being a reward
+   for scrolling to the bottom of a 25-source track. */
+.detail-foot-stick {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  background: var(--bg);
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--divider);
+}
+/* Only when it IS the pane's own child does it reach for the pane's edges — a staged entity
+   nests its header inside the amber frame, where these margins would break out of it. */
+.pane.detail > .detail-head-stick {
+  margin: 0 -1.2rem;
+  padding: 1.1rem 1.2rem 0.5rem;
+}
+.pane.detail > .detail-foot-stick {
+  /* Keeps `.detail-actions`' own 0.8rem of air above it — the shorthand that reached for the
+     pane's side edges had reset it to 0, so the last thing on the page ended flush against the
+     bar's border and read as cut off. */
+  margin: 0.8rem -1.2rem 0;
+  padding: 0.5rem 1.2rem 1.1rem;
+}
+
+.detail-top-meta {
+  color: var(--faint);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+  margin: 0.35rem 0 0.6rem;
+}
+
+/* ── Edit mode ("unified create = detail with an edit
+   toggle"). Edit OFF = a clean reading view: every mutating affordance — dashed add boxes,
+   row/tag ×s, pencils, Remove — hides until the rail's ✎ toggle (per rail; Journey's own
+   Edit toggle drives the same classes there). Progress (read/unread) is not editing. */
+.pane.detail:not(.editing) :is(.connection-add, .connection-x, .chip-x, .title-pencil, .remove, .tag-add, .path-x, .x-del),
+.journey:not(.editing) :is(.connection-add, .connection-x, .chip-x, .title-pencil, .remove, .tag-add, .path-x, .x-del) {
+  display: none !important;
+}
+.edit-toggle {
+  flex: none;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.55rem;
+  cursor: pointer;
+}
+.edit-toggle:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.edit-toggle.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #15141d;
+}
+
+
+/* Direct-edit cue: in edit mode, editable text opens its editor on click;
+   hovering shows it's live. */
+.editing .editable-text {
+  cursor: text;
+  border-radius: 4px;
+}
+.editing .editable-text:hover {
+  background: var(--surface-2);
+  outline: 1px dashed var(--line-strong);
+  outline-offset: 2px;
+}
+
+
+/* ── Staged / inbox ─────────────────────────────────────────────────── */
+/* The pending-validation badge — amber like .rel-badge.raised: attention, not alarm. */
+.staged-badge {
+  font-size: 0.62rem;
+  letter-spacing: 0.03em;
+  border-radius: 999px;
+  padding: 0 0.4rem;
+  margin-left: 0.35rem;
+  white-space: nowrap;
+  text-transform: lowercase;
+  color: var(--raised);
+  border: 1px solid color-mix(in srgb, var(--raised) 45%, transparent);
+}
+.tab-count {
+  font-size: 0.62rem;
+  border-radius: 999px;
+  padding: 0 0.35rem;
+  margin-left: 0.3rem;
+  color: var(--raised);
+  border: 1px solid color-mix(in srgb, var(--raised) 45%, transparent);
+}
+/* Inbox rows: the ItemList grid plus a trailing verdict cluster in place of the chevron. */
+.item.inbox-row {
+  grid-template-columns: 28px 1fr auto;
+  cursor: pointer;
+}
+.inbox-acts {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+.inbox-accept,
+.inbox-reject {
+  background: none;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  padding: 0.1rem 0.55rem;
+  white-space: nowrap;
+  color: var(--muted);
+  border: 1px solid var(--divider);
+}
+.inbox-accept:hover {
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 55%, transparent);
+}
+.inbox-reject:hover {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+}
+/* The pending frame: a STAGED entity's whole header — kind row, byline,
+   title — sits inside the amber box; the verdict row is the frame's bottom edge. */
+.staged-frame {
+  border: 1px solid color-mix(in srgb, var(--raised) 40%, transparent);
+  background: color-mix(in srgb, var(--raised) 6%, transparent);
+  border-radius: 10px;
+  padding: 0.65rem 0.8rem 0;
+  margin: 0 0 0.9rem;
+}
+.detail-top-meta {
+  margin-bottom: 0.35rem;
+}
+.staged-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.45rem -0.8rem 0; /* bleed to the frame's edges so the divider spans it */
+  padding: 0.4rem 0.8rem;
+  border-top: 1px solid color-mix(in srgb, var(--raised) 25%, transparent);
+}
+.staged-banner .staged-badge {
+  margin-left: 0;
+}
+.staged-note {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+/* Companion suggestion rows — the accept-time chips above the staged rows. */
+.companion-block {
+  border-bottom: 1px solid var(--divider);
+}
+.companion-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 1rem;
+  border-left: 2px solid color-mix(in srgb, var(--raised) 45%, transparent);
+}
+.companion-reason {
+  color: var(--faint);
+  font-size: 0.74rem;
+  padding: 0 1rem 0.5rem 1.35rem;
+  border-left: 2px solid color-mix(in srgb, var(--raised) 45%, transparent);
+  margin-top: -0.35rem;
+}
+.browse-count.inbox-n {
+  color: var(--muted);
+  font-weight: 600;
+}
+/* Twin collapse: the map toggle and the ×N count on a folded node. */
+.map-toggle {
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+  background: none;
+  border: 1px solid var(--divider);
+  border-radius: 999px;
+  padding: 0.22rem 0.6rem;
+  cursor: pointer;
+}
+.map-toggle.on {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.twin-badge {
+  font-size: 9px;
+  font-weight: 700;
+  fill: var(--accent);
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: var(--bg);
+  stroke-width: 3px;
+}
+
+/* The Inbox tab's waiting count (the rail row's number, moved up). */
+.tab-count {
+  margin-left: 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.companion-notes {
+  padding: 0.4rem 1rem 0.1rem;
+  font-size: 0.74rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* ── Capture-first start panel ─────────────────────────────────────────────────────────── */
+.start-panel {
+  padding: 2rem 1.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  overflow-y: auto;
+}
+.start-block h2 {
+  font-size: 1.05rem;
+  margin: 0 0 0.35rem;
+}
+.start-block .hint {
+  max-width: 60ch;
+  margin: 0 0 0.9rem;
+  line-height: 1.55;
+}
+.start-capture {
+  display: flex;
+  gap: 0.5rem;
+  max-width: 60ch;
+}
+.start-capture input {
+  flex: 1;
+  min-width: 0;
+}
+/* NOT a flex container. These asides are a SENTENCE with emphasis in
+   it, and flex makes every text node and every <em> its own item — so the prose shredded into
+   narrow columns, one per fragment, wherever it mentioned a button by name. Inline layout is what
+   a paragraph wants; only the leading icon needs positioning. */
+.start-aside {
+  margin: 0.9rem 0 0 !important;
+  font-size: 0.78rem;
+}
+.start-aside > svg {
+  vertical-align: -1px;
+  margin-right: 0.35rem;
+}
+.start-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.start-example {
+  flex: 1 1 15rem;
+  max-width: 22rem;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 10px;
+  padding: 0.7rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--text);
+}
+.start-example:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+.start-example:disabled {
+  opacity: 0.6;
+}
+.start-example-title {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.92rem;
+  color: var(--k-track);
+}
+.start-example-goal {
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.start-example-meta {
+  font-size: 0.72rem;
+  color: var(--faint);
+}
+/* The sparse-library strip: same doors, quieter, above the rows. */
+.start-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--divider);
+  background: var(--surface);
+}
+.start-strip .start-capture {
+  flex: 1 1 18rem;
+}
+.start-strip-forks {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.76rem;
+  color: var(--faint);
+  flex-wrap: wrap;
+}
+/* Taxonomy groups on the published map (shared rule, lib/map-groups.ts). */
+/* Edge-family legend swatches (lib/edge-families.ts). */
+.map-legend .edge-swatch {
+  width: 26px;
+  height: 10px;
+  vertical-align: -1px;
+  margin-right: 0.3rem;
+}
+.map-legend .node-swatch {
+  width: 13px;
+  height: 13px;
+  vertical-align: -2px;
+  margin-right: 0.3rem;
+  margin-right: 0.25rem;
+}
+.map-legend .legend-gap {
+  color: var(--faint);
+}
+/* The needs-sources flag — amber, like everything asking. */
+.read-toggle.needs-sources.on {
+  color: var(--raised);
+  border-color: color-mix(in srgb, var(--raised) 55%, transparent);
+  background: color-mix(in srgb, var(--raised) 10%, transparent);
+}
+
+/* The publication page's Track view: one section, three ways to read it.
+   'roomy' gives the graph bigger entities than the ask page's compact tree. */
+/* Room under the rule the meta line draws: the toggle used to sit flush
+   against it, with nothing separating the header from the view. */
+.pub-track { display: flex; flex-direction: column; gap: 14px; padding-top: 22px; }
+/* Stacked, the aside is NOT a box. A sticky element travels only as
+   far as its own parent, and stacked this wrapper is exactly as tall as the description and map
+   inside it — so the map unpinned the instant the description scrolled past, which is the same
+   failure the wide view's `align-items: stretch` exists to prevent. `display: contents` drops the
+   wrapper's box, leaving goal, meta and map as direct children of the tall column: the map gets
+   the whole reading to travel against, and the description and byline still scroll away under it
+   because they are ordinary rows in that column. Above 1500px it is the left column again. */
+.pub-aside { display: contents; }
+/* The map stays put while the tree scrolls under it: on a long track the
+   shape is the thing you keep needing, so it pins to the top of the scroller. Its own
+   background, or the tree would show through. */
+.pub-mapstick {
+  position: sticky;
+  /* Pinned directly under the frozen header, whose height Publication measures into this
+     variable — a long title wraps, so the offset cannot be a constant. */
+  top: var(--pub-head-h, 0px);
+  isolation: isolate; /* keeps ::before's z-index:-1 inside this block, not behind the page */
+  /* Above everything the page scrolls under it. The focused box's accent ring was painting
+     THROUGH the map — it only showed when highlighted, because only
+     then does that box draw anything where the map already is. */
+  z-index: 20;
+  background: var(--bg);
+  padding: 10px 0 8px;
+  margin-top: -10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-bottom: 1px solid var(--divider);
+}
+/* The frozen background reaches into the document's side padding. A focused box wears a 1px
+   accent RING (box-shadow), which extends a pixel past the content box — far enough to escape
+   the sticky block's background and draw two thin purple lines down the sides of the map, and
+   only ever when something was highlighted. A pseudo-element does
+   it without changing the map's own width. */
+.pub-mapstick::before {
+  content: '';
+  position: absolute;
+  inset: 0 -24px;
+  background: var(--bg);
+  z-index: -1;
+}
+
+/* ── The page's frozen chrome ────────────────────────────────────────
+   A toolbar across the WHOLE page — what this is, the way back, the way to take it — with the
+   track's name under it. Both stay put; the description and byline below them scroll, because
+   they are read once and freezing them would spend the top of every screen on them. */
+.pub-frozen {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--bg);
+  border-bottom: 1px solid var(--divider);
+}
+.pub-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 24px;
+  border-bottom: 1px solid var(--divider);
+}
+.pub-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0.7rem 24px 0.3rem;
+}
+/* The track's name. Smaller than the h1 it replaces: this is a bar that stays on screen, not a
+   page opening. */
+.pub-stucktitle {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.25;
+}
+/* Back to the registry that served this page — a quiet link, left of Fork. */
+.pub-registry {
+  margin-left: auto;
+  margin-right: 0.9rem;
+  color: var(--accent-soft);
+  font-size: 0.85rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.pub-registry:hover {
+  text-decoration: underline;
+}
+
+/* ── Two columns, when the screen is genuinely wide ──────────────────
+   Description + map on the left, the reading on the right. Below the threshold `.pub-track` is
+   an ordinary block and the two halves stack in source order — which IS the narrow page, so
+   there is one layout with a switch, not two layouts to keep in step.
+
+   1500px is chosen from the arithmetic, not taste: the aside needs ~380px to keep the map
+   legible, the reading column wants the ~760px it has today, plus the gutter and the page's own
+   padding — about 1230px before it is worth splitting at all. The extra margin keeps ordinary
+   laptop widths on the single column, where they belong. */
+@media (min-width: 1500px) {
+  /* The page GROWS with the screen instead of stopping at a fixed column:
+     a bigger monitor should buy a bigger map AND a bigger reading, not more empty margin. The
+     ceiling only stops a 5K display from stretching lines past reading width. */
+  .pub {
+    --pub-w: min(2600px, 95vw);
+  }
+  .pub-doc,
+  .pub-titlebar,
+  .pub-tabs {
+    /* The title bar widens WITH the document, or the frozen title floats centred over a page
+       whose content now starts further left. The TAB ROW rides the same rail — it aligns with
+       the heading's left edge at every width. */
+    max-width: var(--pub-w);
+  }
+  .pub-track {
+    display: grid;
+    /* Near enough an even split. The floor is what keeps the map legible if the ceiling above
+       ever comes down; the 1fr lets the reading take whatever the map does not. */
+    grid-template-columns: minmax(420px, 46%) minmax(0, 1fr);
+    column-gap: 40px;
+    /* NOT `start`: the aside must stretch to the row's height, or the sticky map inside it has
+       no distance to travel and unpins the moment the description scrolls past. */
+    align-items: stretch;
+  }
+  /* With a column of its own the map can be taller too — it is the whole left-hand story, and
+     it has a long reading beside it to stay level with. */
+  .pub-map {
+    height: min(560px, 62vh);
+  }
+  /* A column of its own, so the wrapper is a box again — and stretched by `align-items` above,
+     which is what gives the sticky map its distance on this side. */
+  .pub-aside {
+    display: block;
+  }
+}
+/* The track box lists EVERY concept in the track (24 of them on a big one), so its chips run
+   small (0.5rem, dialled back from a literal half of 0.72rem) — an index of
+   what the track covers, still readable. Only in the track box: chips on a source stay full
+   size. */
+/* Specificity note: `.outline-cchip.tapped` sets the size, so a descendant selector alone
+   loses to it — the `.tapped` half is what actually applies to these. */
+.agraph-track-detail .outline-cchip,
+.agraph-track-detail .outline-cchip.tapped {
+  /* A track lists EVERY concept it covers — two dozen on a big one — so these are set below the
+     0.72rem a chip wears everywhere else. Half size turned out to be too far:
+     they read as decoration rather than as the track's contents. Just under full (04). */
+  font-size: 0.64rem;
+  padding: 0.02rem 0.45rem;
+  border-radius: 999px;
+  line-height: 1.7;
+}
+.agraph-track-detail .pub-chips {
+  gap: 0.25rem 0.3rem;
+}
+
+/* An attachment that selects reads as clickable, and shows when it is the one selected. */
+.agraph-att[role='button'] { cursor: pointer; }
+.agraph-att[role='button']:hover { border-color: color-mix(in srgb, var(--k-question) 75%, transparent); }
+.agraph-att.snippet[role='button']:hover { border-color: color-mix(in srgb, var(--k-snippet) 75%, transparent); }
+.agraph-att.focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+/* What the map has been narrowed to, and the way back. */
+.pub-mapscope { display: flex; align-items: center; justify-content: flex-end; gap: 10px; font-size: 12.5px; color: var(--muted); margin-top: -6px; }
+.pub-mapscope strong { color: var(--text); font-weight: 500; }
+.pub-mapscope button { font: inherit; font-size: 11.5px; cursor: pointer; color: var(--accent-soft); background: var(--accent-bg); border: 1px solid var(--accent); border-radius: 999px; padding: 1px 10px; }
+/* A concept chip that narrows the map is a button, and must not look like a new thing. Reset
+   the family only — `font: inherit` is a shorthand, and it silently dropped the chip's own
+   font-size back to the parent's (chips once grew from 0.72rem to 14px). */
+.outline-cchip.tapped { font-family: inherit; font-size: 0.72rem; cursor: pointer; }
+.outline-cchip.tapped.on { border-color: var(--accent); color: var(--accent-soft); }
+.pub-trackbar { display: flex; justify-content: flex-end; }
+.pub-viewtoggle { margin-left: auto; font-weight: 400; letter-spacing: 0; text-transform: none; }
+/* NO max-width on the roomy tree: indentation moves a box's LEFT edge, so
+   capping the width made concepts, sources, questions and passages each stop somewhere
+   different. Unset, every box runs to the column's right edge and they all end in line. */
+.agraph.roomy .agraph-box { max-width: none; padding: 10px 14px; gap: 8px; }
+.agraph.roomy .agraph-box-title { font-size: 14.5px; }
+.agraph.roomy .agraph-n { width: 20px; height: 20px; font-size: 11px; }
+.agraph.roomy .agraph-box-icon svg { width: 16px; height: 16px; }
+.agraph.roomy .agraph-spine { gap: 11px; }
+.agraph.roomy .agraph-track { font-size: 15px; padding: 10px 16px; }
+.agraph.roomy .agraph-q { max-width: none; }
+.pub-graph-detail { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.pub-graph-detail .pub-src-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pub-graph-detail .pub-snippet { margin: 0; }
+.pub-graph-detail .pub-chips { margin: 0; }
+
+/* ── TrackGraph: the shared tree ──────────────────────────────────────
+   Lives HERE, not in the public bundle's ask.css: the publication page renders TrackGraph from
+   the MAIN bundle, so ask-only styling left it completely unstyled. */
+.askx-vote { flex: none; display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 11.5px; padding: 3px 9px; border-radius: 6px; cursor: pointer; background: transparent; border: 1px solid var(--line); color: var(--muted); }
+.askx-vote:hover { border-color: var(--line-strong); }
+.askx-vote.on { border-color: var(--accent); color: var(--accent-soft); }
+.askx-viewtoggle { display: inline-flex; border: 1px solid var(--divider); border-radius: var(--radius-md); overflow: hidden; }
+.askx-viewtoggle button { font: inherit; font-size: 11px; padding: 3px 10px; background: none; border: none; color: var(--muted); cursor: pointer; }
+.askx-viewtoggle button + button { border-left: 1px solid var(--divider); }
+.askx-viewtoggle button.on { color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.agraph { display: flex; flex-direction: column; gap: 0; }
+/* The track reads as an ENTITY, not a title bar: when it carries detail it
+   is a full-width box like every other, ending on the same right edge. */
+.agraph-track { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 8px 14px; font-size: 13.5px; }
+.agraph-track.box { display: flex; flex-direction: column; align-items: stretch; align-self: stretch; gap: 8px; padding: 10px 16px; cursor: pointer; }
+.agraph-track.box:hover { border-color: var(--line-strong); }
+.agraph-track-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.agraph-track-title { min-width: 0; }
+.agraph-track-detail { display: block; padding-left: 25px; }
+.agraph-track.focus, .agraph-box.focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.agraph-track-icon { color: var(--k-track); display: flex; }
+.agraph-spine { margin-left: 14px; border-left: 2px solid var(--line); display: flex; flex-direction: column; gap: 8px; padding: 10px 0 2px; }
+.agraph-branch { position: relative; margin-left: 26px; }
+.agraph-branch::before { content: ''; position: absolute; left: -28px; top: 16px; width: 26px; height: 2px; background: color-mix(in srgb, var(--k-source) 55%, transparent); }
+.agraph-branch.rec::before { background: repeating-linear-gradient(90deg, var(--k-source) 0 4px, transparent 4px 8px); }
+.agraph-box { display: flex; flex-direction: column; gap: 6px; background: var(--surface); border: 1px solid color-mix(in srgb, var(--k-source) 45%, transparent); border-radius: var(--radius-md); padding: 7px 11px; cursor: pointer; max-width: 560px; }
+.agraph-box:hover { border-color: color-mix(in srgb, var(--k-source) 75%, transparent); }
+.agraph-box.open { border-color: var(--accent); }
+.agraph-box.rec { border-style: dashed; border-color: color-mix(in srgb, var(--k-source) 65%, transparent); }
+.agraph-box.fresh { animation: askx-arrive 0.5s ease-out; }
+.agraph-box-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.agraph-n { flex: none; width: 17px; height: 17px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9.5px; border: 1px solid var(--line-strong); color: var(--muted); }
+.agraph-box-icon { flex: none; color: var(--k-source); display: flex; }
+.agraph-box-title { font-size: 13px; line-height: 1.3; min-width: 0; }
+.agraph-rec-tag { flex: none; font-size: 9.5px; padding: 1px 7px; border-radius: 6px; border: 1px dashed color-mix(in srgb, var(--k-source) 60%, transparent); color: var(--accent-soft); }
+.agraph-box-detail { display: flex; align-items: center; gap: 10px; cursor: default; padding-left: 25px; flex-wrap: wrap; }
+.agraph-meta { font-size: 11px; color: var(--muted); }
+.agraph-link { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: var(--accent-soft); }
+.agraph-q { display: flex; align-items: flex-start; gap: 7px; margin-left: 26px; position: relative; background: var(--surface); border: 1px solid color-mix(in srgb, var(--k-question) 45%, transparent); border-radius: var(--radius-md); padding: 6px 10px; max-width: 560px; }
+.agraph-q-icon { margin-top: 2px; }
+.agraph-q::before { content: ''; position: absolute; left: -28px; top: 50%; width: 26px; height: 2px; background: color-mix(in srgb, var(--k-question) 65%, transparent); }
+.agraph-q-icon { color: var(--k-question); display: flex; flex: none; }
+.agraph-q-text { font-size: 12px; color: var(--muted); }
+.agraph-q-ans { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; color: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--k-source) 50%, transparent); border-radius: 6px; padding: 1px 7px; }
+.agraph-q-ans svg { color: var(--k-source); flex: none; }
+.agraph-branch.orphan { margin-top: 2px; }
+.agraph-branch.concept::before { background: color-mix(in srgb, var(--k-concept) 65%, transparent); }
+/* Dashed means PENDING: only a concept still wanting sources draws dashed —
+   its connector, its subtree's spine, and its own frame. A covered concept is solid. */
+.agraph-branch.concept.needs::before { background: repeating-linear-gradient(90deg, var(--k-concept) 0 4px, transparent 4px 8px); }
+.agraph-box.concept { border-color: color-mix(in srgb, var(--k-concept) 45%, transparent); }
+.agraph-box.concept.needs { border-style: dashed; }
+.agraph-cpt-icon { flex: none; color: var(--k-concept); display: flex; }
+.agraph-needs-tag { flex: none; font-size: 9.5px; padding: 1px 7px; border-radius: 6px; border: 1px dashed color-mix(in srgb, var(--k-concept) 55%, transparent); color: var(--k-concept); }
+/* Uncategorized: the members this track holds that belong to no concept it holds (06). GREY and iconless on purpose — every other heading on the spine is a concept, and
+   the colour is what says this one is not. It reads as a terminator for the category above it as
+   much as a label for the rows below, which is why it stays even when nothing follows it. */
+.agraph-loose-head {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding: 2px 0 4px;
+}
+.agraph-branch.loose > .agraph-branch::after {
+  border-color: var(--faint);
+}
+
+/* The chips a box carries — the concepts a source is about, or the ones a track covers. The
+   chip itself is `outline-cchip`, the same one the workbench and the publication page use; this
+   only decides that they wrap. */
+.agraph-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.agraph-spine.nested { margin-left: 17px; padding: 8px 0 0; border-left-style: solid; border-left-color: color-mix(in srgb, var(--k-concept) 45%, transparent); }
+.agraph-branch.concept.needs > .agraph-spine.nested { border-left-style: dashed; }
+.agraph-spine.nested > .agraph-q { margin-left: 26px; }
+.agraph-spine.nested > .agraph-q::before { left: -28px; width: 26px; }
+/* Port dots: each item wears a hollow dot in its kind color where its
+   connector meets the spine — the graph-node port from the workbench GraphView language. */
+.agraph-branch::after { content: ''; position: absolute; left: -31px; top: 13px; width: 5px; height: 5px; border-radius: 50%; border: 1.5px solid var(--k-source); background: var(--bg); }
+.agraph-branch.concept::after { border-color: var(--k-concept); }
+.agraph-q::after { content: ''; position: absolute; left: -31px; top: 50%; transform: translateY(-50%); width: 5px; height: 5px; border-radius: 50%; border: 1.5px solid var(--k-question); background: var(--bg); }
+.agraph-spine.nested > .agraph-q::after { left: -31px; }
+.askx-takeback { display: inline-flex; align-items: center; gap: 4px; font: inherit; font-size: 10.5px; padding: 2px 8px; border-radius: 6px; cursor: pointer; background: none; border: 1px solid var(--line); color: var(--faint); }
+.askx-takeback:hover { border-color: var(--danger); color: var(--danger); }
+/* A question hanging under its raising SOURCE (the tie-less fallback) sits inside the branch:
+   shorter connector off the box's own line. */
+.agraph-branch > .agraph-q { margin: 7px 0 0 34px; }
+.agraph-branch > .agraph-q::before { left: -16px; width: 12px; }
+.agraph-branch > .agraph-q::after { left: -19px; }
+
+/* Responsive LAST (cascade: these must outrank the base .askx-rail rule below-them-in-source
+   or the phone rail stays sticky and the activity area slides up into it). */
+@media (max-width: 1500px) {
+  .askx-grid { grid-template-areas: 'left rail' 'mid rail'; grid-template-columns: minmax(0, 1fr) 480px; }
+}
+@media (max-width: 1100px) {
+  .askx-grid { grid-template-areas: 'left' 'mid' 'rail'; grid-template-columns: 1fr; }
+  .askx-rail { border-left: none; border-top: 1px solid var(--divider); position: static; max-height: none; }
+}
+/* The published list's cards carry their number INSIDE — the same value the
+   graph shows in its circle, so the two views agree at a glance. */
+/* The number badge IS the graph's circle — same size, same border, same muted ink, so the two
+   views read as one thing. */
+.pub-src-n { flex: none; width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 400; border: 1px solid var(--line-strong); color: var(--muted); margin-right: 9px; }
+.pub-list .pub-topic + .pub-topic { margin-top: 1.2rem; }
+/* Cards take the graph box's frame: source-purple hairline, tighter radius and padding. */
+.pub-list .pub-source { border-color: color-mix(in srgb, var(--k-source) 45%, transparent); border-radius: var(--radius-md); padding: 10px 14px; }
+.pub-list .pub-source:hover { border-color: color-mix(in srgb, var(--k-source) 75%, transparent); }
+.pub-list .pub-source h3 { display: flex; align-items: center; gap: 0; font-size: 14.5px; margin: 0 0 4px; }
+.pub-list .pub-source .pub-src-icon { margin-right: 8px; color: var(--k-source); display: inline-flex; }
+/* Attachment cards: a question or a passage hanging off its source on its
+   own connector, the way a source hangs off its concept. Kind colours the frame and the mark. */
+.agraph-att.snippet { border-color: color-mix(in srgb, var(--k-snippet) 45%, transparent); }
+.agraph-att.snippet .agraph-q-icon { color: var(--k-snippet); }
+.agraph-att.snippet::before { background: color-mix(in srgb, var(--k-snippet) 65%, transparent); }
+.agraph-att.snippet::after { border-color: var(--k-snippet); }
+.agraph-att .agraph-q-text { display: block; min-width: 0; }
+.agraph-att .agraph-q-text .md-p { margin: 0; }
+.agraph.roomy .agraph-att { max-width: 640px; }
+
+/* Attachments hang off their SOURCE on their own spine, aligned under the source's number
+   badge the way the concept spine aligns under the concept's icon. */
+.agraph-spine.atts { border-left-style: solid; border-left-color: color-mix(in srgb, var(--k-source) 45%, transparent); margin-left: 20px; padding: 8px 0 0; }
+.agraph.roomy .agraph-spine.atts { margin-left: 24px; }
+/* Roomy boxes pad wider, so the nested spine moves with the concept icon it descends from. */
+.agraph.roomy .agraph-spine.nested { margin-left: 21px; }
+.agraph.roomy .agraph-spine.nested.atts { margin-left: 24px; }
+/* The open-link icon and the collapse caret ride the head row: clicking the
+   BOX collapses what is under it, so opening the source needs its own target. */
+.agraph-open { flex: none; display: inline-flex; align-items: center; color: var(--accent-soft); padding: 1px 3px; border-radius: 4px; }
+.agraph-open:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+/* The caret is the expand control now — a real <button>, so it carries the
+   reset as well as the placement. */
+.agraph-caret { flex: none; margin-left: auto; color: var(--faint); display: inline-flex; align-items: center; background: none; border: none; padding: 2px; cursor: pointer; border-radius: 4px; }
+.agraph-caret:hover { color: var(--text); background: var(--chip-bg); }
+.agraph-box-head { width: 100%; }
+.pub .agraph { margin-top: 0.9rem; }
+.pub .map-legend { position: static; margin: 0.35rem 0 0; border: none; background: none; padding: 0; flex-wrap: wrap; }
+
+
+/* ── Settings ─────────────────────────────────────────────────────────
+   A dialog rather than a tab: it answers questions ABOUT the app, not questions the app is for,
+   so it sits over the work instead of replacing it. */
+.settings-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 6vh 1rem 2rem;
+  overflow-y: auto;
+}
+.settings-panel {
+  width: min(640px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  /* Clip content to the rounded border, and scroll a tall panel instead of overflowing the
+     screen (buttons appeared to clip the right border). */
+  box-sizing: border-box;
+  /* The PANEL clips to its radius but never scrolls itself: scrolling lives in .settings-body,
+     whose stable scrollbar gutter keeps content out from under the scrollbar (the right-edge
+     border clipping, seen in Firefox) and whose padding keeps outlined elements off the hard
+     scroll edge. Bonus: the header and tabs stay pinned while the body scrolls. */
+  overflow: hidden;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+.settings-body {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  min-height: 0;
+}
+.settings-panel * {
+  box-sizing: border-box;
+}
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.1rem;
+  border-bottom: 1px solid var(--divider);
+}
+.settings-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.settings-gh {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-decoration: none;
+}
+.settings-gh:hover {
+  color: var(--accent-soft);
+}
+.settings-head .pinned-x {
+  width: 26px;
+  height: 26px;
+  margin-left: 0;
+}
+.settings-head h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+.settings-section {
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--divider);
+}
+.settings-section:last-child {
+  border-bottom: none;
+}
+.settings-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.5rem;
+  font-size: 0.76rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+}
+.settings-section p {
+  margin: 0 0 0.5rem;
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+.settings-meta {
+  color: var(--muted);
+  font-size: 0.8rem !important;
+}
+.settings-note {
+  color: var(--accent-soft);
+  background: var(--accent-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.8rem !important;
+}
+/* Wraps, and the prose shrinks before the buttons do: a long
+   explanation used to push "Save and reload" 119px off the panel's right edge, so the control
+   the fields exist for was invisible. */
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin: 0.6rem 0 0.3rem;
+}
+.settings-row > div,
+.settings-row > .settings-check {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+.settings-row > span {
+  display: inline-flex;
+  gap: 0.4rem;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+.settings-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.7rem;
+}
+.settings-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  padding: 0.6rem 0.7rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+}
+.settings-choice:hover {
+  border-color: var(--line-strong);
+}
+.settings-choice.on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.settings-choice strong {
+  font-size: 0.86rem;
+  font-weight: 500;
+}
+.settings-choice span {
+  font-size: 0.76rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+@media (max-width: 520px) {
+  .settings-choices { grid-template-columns: 1fr; }
+}
+.settings-note p {
+  margin: 0 0 0.35rem;
+}
+.settings-note p:last-child {
+  margin-bottom: 0;
+}
+.settings-list {
+  margin: 0.2rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+.settings-list li + li {
+  margin-top: 0.25rem;
+}
+.settings-section.danger h3 {
+  color: var(--danger);
+}
+.pm-btn.danger {
+  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+  color: var(--danger);
+}
+.pm-btn.danger:hover {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+/* The standing "could not save" alert — deliberately unmissable: everything else keeps
+   working, so nothing else will tell them. */
+.storage-alert {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 99999;
+  padding: 10px 14px;
+  font-size: 13px;
+  background: #5b1d1d;
+  color: #fff;
+  text-align: center;
+}
+
+/* Capability messaging: an engine that cannot do something says why, in the
+   place the affordance would have been. Quiet — this is a property of the engine, not an error
+   the learner caused. */
+.needs-server-note {
+  margin: 0.2rem 0 0.6rem;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--muted);
+  border-left: 2px solid var(--line-strong);
+  padding-left: 0.6rem;
+}
+.link-btn.needs-server {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.settings-field {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin: 0.45rem 0;
+}
+.settings-field > span {
+  flex: 0 0 8.5rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.settings-field .pm-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.settings-check {
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.settings-check.bad {
+  color: var(--danger);
+}
+
+/* The hosted offers: "sign in", and "keep this library here?". Deliberately
+   NOT styled as an error — nothing has gone wrong, and a person who never wanted hosted storage
+   should not be told that something failed. */
+.host-offer {
+  margin: 1rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  max-width: 44rem;
+}
+.host-offer h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+  font-weight: 500;
+}
+.host-offer p {
+  margin: 0 0 0.8rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+.host-offer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+/* Which library you are in, in the top bar — always present, so it is never
+   a surprise. Muted for the browser (it is the quiet default); accent-tinted for a hosted one. */
+.lib-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  border: 1px solid var(--line);
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.lib-badge:hover {
+  border-color: var(--muted);
+}
+/* The storage choice: two real options side by side, chosen BEFORE login. */
+.storage-reversible {
+  margin: -0.4rem 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.storage-choice .storage-options {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+}
+.storage-option {
+  flex: 1 1 16rem;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  cursor: pointer;
+  font: inherit;
+}
+.storage-option strong {
+  font-weight: 500;
+}
+.storage-option span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.storage-option:hover {
+  border-color: var(--muted);
+}
+.storage-option.primary {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.storage-option.primary:hover {
+  border-color: var(--accent);
+}
+.lib-badge.local {
+  color: var(--muted);
+}
+.lib-badge.hosted {
+  color: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* The three doors of an empty library: track / concept / source, each the
+   kind's own colour, each saying what it is. They land in the ordinary create form. */
+.start-doors {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.3rem;
+  max-width: 34rem;
+}
+.start-door {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 0.7rem;
+  row-gap: 0.15rem;
+  text-align: left;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  cursor: pointer;
+  font: inherit;
+}
+.start-door:hover {
+  border-color: var(--muted);
+}
+.start-door-icon {
+  grid-row: 1 / 3;
+  align-self: center;
+  display: inline-flex;
+}
+.start-door-title {
+  font-weight: 500;
+  align-self: end;
+}
+.start-door-blurb {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+/* Topbar sign-in / account: the way IN, right in the chrome, when the origin
+   offers accounts. The account chip is an initial in a circle, the same language the registry uses. */
+.topbar-signin {
+  /* The registry's bordered rectangle is the canonical sign-in control (09) — .reg-signin in src/server/public-shell.ts; this copies it. */
+  font: inherit;
+  font-weight: 600;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  opacity: 0.85;
+  cursor: pointer;
+}
+.topbar-signin:hover {
+  opacity: 1;
+}
+.topbar-account {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  opacity: 0.85;
+  cursor: pointer;
+}
+.topbar-account:hover {
+  opacity: 1;
+}
+/* The hosted-account block in Settings — sign in, and the way up. */
+.settings-hosted {
+  margin: 0.2rem 0 0.6rem;
+}
+.settings-hosted-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 0.4rem;
+  flex-wrap: wrap;
+}
+
+/* The top-right account area: sign in, or the person's initial with a menu. */
+.topbar-acct {
+  position: relative;
+  display: inline-flex;
+}
+.topbar-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent-soft);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.topbar-avatar:hover {
+  border-color: var(--accent);
+}
+.acct-menu-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+.acct-menu {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 41;
+  min-width: 12rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  padding: 0.35rem;
+  display: flex;
+  flex-direction: column;
+}
+.acct-menu-who {
+  padding: 0.3rem 0.5rem 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+.acct-menu-sub {
+  padding: 0 0.5rem 0.35rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+  border-bottom: 1px solid var(--divider);
+  margin-bottom: 0.3rem;
+}
+.acct-menu-item {
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+.acct-menu-item:hover {
+  background: var(--surface-2);
+}
+.acct-menu-item.danger {
+  color: var(--k-question);
+}
+
+/* Community controls in the Publishing box. */
+.community-box {
+  margin-top: 0.8rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--divider);
+}
+.community-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0.3rem 0 0.6rem;
+  cursor: pointer;
+}
+.community-toggle input {
+  margin-top: 0.15rem;
+}
+.community-invite {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+.community-invite .pm-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.78rem;
+}
+.community-invite-actions {
+  display: flex;
+  gap: 0.9rem;
+  margin-top: 0.35rem;
+}
+.link-btn.danger {
+  color: var(--k-question);
+}
+.community-members {
+  margin-top: 0.7rem;
+  font-size: 0.82rem;
+}
+.community-members ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--muted);
+}
+
+/* The registry a publication goes to — a fact where a registry served the page, not a field. */
+.registry-target {
+  font-size: 0.78rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Registry sync state: is the public copy the current one? */
+.sync-state {
+  font-style: normal;
+}
+.sync-state.ok {
+  color: var(--k-concept);
+}
+.sync-state.stale {
+  color: var(--k-question);
+}
+
+/* The contribute rail on a public track page — member-only. */
+.pub-contribute {
+  margin: 1.6rem 0 0.6rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.pubc-kind {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0.6rem 0;
+}
+.pubc-tab {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.pubc-tab.on {
+  border-color: var(--accent);
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.pubc-text {
+  width: 100%;
+  min-height: 4.2rem;
+  resize: vertical;
+  font: inherit;
+  font-size: 0.86rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg);
+  color: var(--text);
+  box-sizing: border-box;
+}
+.pubc-input {
+  width: 100%;
+  font: inherit;
+  font-size: 0.84rem;
+  padding: 0.4rem 0.6rem;
+  margin-top: 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg);
+  color: var(--text);
+  box-sizing: border-box;
+}
+.pubc-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  align-items: center;
+}
+.pubc-about {
+  flex: 1;
+  min-width: 0;
+  margin-top: 0;
+}
+.pubc-send {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font: inherit;
+  font-size: 0.84rem;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm, 6px);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--text);
+  cursor: pointer;
+}
+.pubc-send:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.pubc-note {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0.5rem 0 0;
+}
+.pubc-mine {
+  margin-top: 0.7rem;
+  font-size: 0.84rem;
+}
+.pubc-mine ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.2rem;
+  color: var(--muted);
+}
+
+/* Community mail in the inbox. */
+.community-mail {
+  border-bottom: 1px solid var(--divider);
+  padding: 0.5rem 0.9rem 0.7rem;
+}
+.inbox-section-title {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0.3rem 0 0.4rem;
+}
+.cmail-row {
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--divider);
+}
+.cmail-row:first-of-type {
+  border-top: none;
+}
+.cmail-body {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+.cmail-kind {
+  color: var(--k-question);
+  font-weight: 600;
+}
+.cmail-text {
+  font-size: 0.88rem;
+}
+.cmail-url {
+  color: var(--accent-soft);
+  word-break: break-all;
+}
+.cmail-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.25rem;
+  font-size: 0.76rem;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+.cmail-actions {
+  display: inline-flex;
+  gap: 0.4rem;
+}
+
+/* The public page's account corner. */
+a.pub-brand {
+  text-decoration: none;
+  color: inherit;
+}
+a.pub-brand:hover .pub-brand,
+a.pub-brand:hover {
+  color: var(--accent-soft);
+}
+.pub-me {
+  text-decoration: none;
+  flex: none;
+}
+
+/* Publish-your-own-version (fork identity): the offer that replaces a dead-end 403. */
+.publish-own {
+  margin-top: 0.5rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--surface-2, rgba(128, 128, 128, 0.06));
+}
+.publish-own-title {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The fork's upstream line: forked-from, and the pull when upstream moved. */
+.upstream-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin: 0.2rem 0 0.5rem;
+  flex-wrap: wrap;
+}
+.upstream-row a {
+  color: var(--accent-soft);
+}
+
+/* Follow, on the public track page. */
+.pub-follow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.2rem 0.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  flex: none;
+}
+.pub-follow:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.pub-follow.on {
+  border-color: var(--accent);
+  color: var(--accent-soft);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* The published track's tabs. */
+.pub-tabs {
+  /* The same column AND the same inset as the title: the titlebar pads
+     24px, so the tab row does too — the first tab's negative margin then cancels its own button
+     padding, landing the first ICON exactly under the title's first glyph. */
+  display: flex;
+  gap: 0.2rem;
+  max-width: 760px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 24px;
+  box-sizing: border-box;
+}
+.pub-tabs-rule {
+  border-bottom: 1px solid var(--divider);
+}
+.pub-tab .ph-icon,
+.pub-tab svg {
+  vertical-align: -2px;
+}
+.pub-tab {
+  font: inherit;
+  font-size: 0.86rem;
+  padding: 0.45rem 0.9rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.pub-tab:hover {
+  color: var(--text);
+}
+.pub-tab.on {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+.pubt {
+  max-width: 46rem;
+  margin: 1.2rem auto 2rem;
+  padding: 0 24px;
+}
+.pubt-h {
+  font-size: 0.95rem;
+  margin: 1.1rem 0 0.4rem;
+}
+.pubt-hungry ul,
+.pubt-qs ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pubt-hungry li,
+.pubt-qs li {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--divider);
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.pubt-cchip {
+  color: var(--k-concept);
+  font-weight: 500;
+}
+.pubt-qtext {
+  color: var(--text);
+}
+.pubt-qs.answered .pubt-qtext {
+  color: var(--muted);
+}
+.pubt-form {
+  margin-top: 1rem;
+}
+.pubt-join {
+  margin-top: 1.2rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+/* The contributions tab wears the ask page's grid. */
+.pubt-wide {
+  max-width: 1200px;
+}
+.pubt-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 1.4rem;
+  align-items: start;
+}
+@media (max-width: 1000px) {
+  .pubt-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.pubt-map {
+  min-width: 0;
+}
+.pubt-rail {
+  border-left: 1px solid var(--divider);
+  padding-left: 1.2rem;
+}
+@media (max-width: 1000px) {
+  .pubt-rail {
+    border-left: none;
+    padding-left: 0;
+  }
+}
+
+/* Late-file overrides: the tab row rides the title's rail at every width —
+   this must sit AFTER the base .pub-tabs rule or the 760px column wins the cascade. */
+@media (min-width: 1500px) {
+  .pub-tabs {
+    max-width: var(--pub-w);
+  }
+}
+/* The toolbar's right corner is one cluster: Follow · Fork · you. */
+.pub-corner {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.pub-corner .pub-fork.top {
+  margin-left: 0;
+}
+
+/* Tab TEXT lines up with title TEXT: with the heading badge gone the title
+   starts at the column edge, so pull the first tab back by its own left padding. */
+.pub-tabs .pub-tab:first-child {
+  margin-left: -0.9rem;
+}
+
+.upstream-actions {
+  display: inline-flex;
+  gap: 0.8rem;
+  align-items: center;
+  flex: none;
+}
+
+/* Entity boxes on a PUBLISHED page read like the map and the library rows:
+   the page's own ground until hovered. Both tabs (Track + Contributions) live under .pub. */
+.pub .agraph-box,
+.pub .agraph-q,
+.pub .agraph-track {
+  background: transparent;
+  transition: background 0.12s ease;
+}
+.pub .agraph-box:hover,
+.pub .agraph-q:hover,
+.pub .agraph-track:hover {
+  background: var(--surface);
+}
+
+/* Account modals: sign-in and the first-run handle chooser, styled like the
+   settings pane. */
+.pm-modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+.pm-modal {
+  width: min(420px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  padding: 1.4rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.pm-modal h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+.pm-provider {
+  display: block;
+  text-align: center;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+}
+.pm-provider:hover {
+  border-color: var(--accent);
+}
+.pm-modal-cancel {
+  align-self: center;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  margin-top: 0.2rem;
+}
+.pm-modal-go {
+  align-self: flex-start;
+  margin-top: 0.3rem;
+}
+.pm-modal-err {
+  color: var(--k-question);
+  font-size: 0.82rem;
+  margin: 0;
+}
+
+/* The sign-in modal wears the /signin page's face. */
+.pm-signin {
+  text-align: center;
+  padding: 2rem 2rem 1.4rem;
+}
+.pm-signin h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.6rem;
+}
+.pm-signin .pm-provider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+}
+.pm-signin-alt {
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+}
+.pm-signin-alt a {
+  color: var(--accent-soft);
+}
+.pm-signin-hint {
+  text-align: center;
+}
+
+/* The publish-state chip: green current, amber ahead, red-ish behind. */
+.pubstate-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.pubstate-chip.current {
+  color: var(--k-concept);
+  border-color: color-mix(in srgb, var(--k-concept) 45%, transparent);
+}
+.pubstate-chip.ahead {
+  color: var(--raised, #d7b26d);
+  border-color: color-mix(in srgb, var(--raised, #d7b26d) 45%, transparent);
+}
+.pubstate-chip.behind {
+  color: var(--k-question);
+  border-color: color-mix(in srgb, var(--k-question) 45%, transparent);
+}
+
+.cmember-x {
+  margin-left: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--faint, var(--muted));
+  font: inherit;
+  cursor: pointer;
+}
+.cmember-x:hover {
+  color: var(--k-question);
+}
+
+/* ── The framework editor ─────────────────────────────────────────────────────── */
+.fwed-list {
+  list-style: none;
+  margin: 0.4rem 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.fwed-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.32rem 0.55rem;
+  font-size: 0.84rem;
+}
+.fwed-word {
+  color: var(--text);
+  font-weight: 600;
+}
+.fwed-inverse,
+.fwed-from {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.fwed-mark {
+  color: var(--faint);
+  font-size: 0.74rem;
+  margin-left: auto;
+}
+.fwed-row select {
+  width: auto;
+  margin-left: auto;
+  font-size: 0.78rem;
+  padding: 0.2rem 0.4rem;
+}
+.fwed-icon {
+  background: none;
+  border: none;
+  color: var(--faint);
+  cursor: pointer;
+  padding: 0.15rem;
+}
+.fwed-icon:hover {
+  color: var(--text);
+}
+.fwed-form {
+  margin-top: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  /* The mint form wears its own box — authoring is one bounded gesture,
+     visually apart from the set-level Load/Install row above it. */
+  border: 1.5px solid var(--line-strong);
+  background-clip: padding-box;
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+}
+.fwed-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  align-items: center;
+}
+.fwed-grid select {
+  width: 100%;
+}
+.fwed-preview {
+  width: 120px;
+  height: 32px;
+  justify-self: end;
+}
+.fwed-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+/* ── Gap strips + edit-mode drag ─────────────────────────────────────
+   Strips render only while a source drag is in flight, and only UNFOLD for the gap under
+   the cursor (all gaps open at once was too many boxes) — the hint line marks it. */
+.gap-hint {
+  height: 18px;
+  margin: 1px 0;
+  border-radius: var(--radius-md);
+  border: 1.5px dashed color-mix(in srgb, var(--line-strong) 55%, transparent);
+  background-clip: padding-box;
+}
+/* A valid move lives here — the hint brightens toward white so the eye can find the legal
+   gaps before committing to a hover. */
+.gap-hint.live {
+  border-color: color-mix(in srgb, var(--text) 65%, transparent);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+.gap-strips {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 0;
+}
+.gap-strip {
+  border: 1.5px dashed var(--line-strong);
+  background-clip: padding-box;
+  border-radius: var(--radius-md);
+  font-size: 0.72rem;
+  color: var(--muted);
+  padding: 0.14rem 0.5rem;
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transition: background 80ms, border-color 80ms, color 80ms;
+}
+.gap-strip.over {
+  border-color: var(--accent);
+  border-style: solid;
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
+  text-align: left;
+}
+/* The slotting preview: the dragged row's title, SOLID, sitting where it would land. */
+.gap-ghost {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.1rem 0.1rem;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.gap-ghost-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gap-ghost-verb {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: var(--accent-soft);
+}
+/* The row being dragged dims in place — you're holding it, the preview shows the landing. */
+.rail-topic-source.drag-origin {
+  opacity: 0.45;
+}
+/* The drag-cursor icon: the source's filled modality glyph, snapshot from offscreen. */
+.drag-img-proxy {
+  position: fixed;
+  top: -120px;
+  left: -120px;
+  color: var(--k-source);
+  pointer-events: none;
+}
+/* A strip whose drop would write nothing (names the dragged source, or the relation already
+   exists) keeps its place but goes light and inert. */
+.gap-strip.off {
+  border-color: color-mix(in srgb, var(--line-strong) 40%, transparent);
+  color: color-mix(in srgb, var(--muted) 45%, transparent);
+  cursor: default;
+}
+/* Reads-before marks in the GUTTER, worn as
+   one PILL each — ↓ arrow, the partner's number, and the × all inside the chip. The × keeps
+   its space and shows on hover, so the pill never changes size. */
+.order-chips {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.gut-rel {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1.5px solid var(--line-strong);
+  background-clip: padding-box;
+  border-radius: 999px;
+  padding: 0.06rem 0.14rem 0.06rem 0.34rem;
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.2;
+}
+.gut-arrow {
+  opacity: 0.7;
+}
+.gut-n {
+  font-variant-numeric: tabular-nums;
+}
+.gut-x {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 0 0.16rem;
+  visibility: hidden;
+}
+.gut-rel:hover .gut-x {
+  visibility: visible;
+}
+.gut-x:hover {
+  color: var(--k-question);
+}
+
+/* Edit mode: the row is a drag handle, not a link. */
+.rail-topic-source.editing {
+  cursor: grab;
+}
+.rail-topic-source.editing:active {
+  cursor: grabbing;
+}
+.rail-topic-source.editing .cchip-label {
+  cursor: default;
+}
+/* Drop highlights — a heading/chip catching a source, a row catching a concept. */
+.rail-topic-head.drop,
+.outline-cchip.drop {
+  border-color: var(--accent);
+  color: var(--accent-soft);
+}
+.rail-topic-source.drop {
+  outline: 1.5px dashed var(--accent);
+  outline-offset: -1.5px;
+}
+.rail-topic-source.editing .outline-cchip {
+  cursor: grab;
+}
+
+/* The working framework's ENTITY tags — a compact chip row (they're vocabulary, not rows). */
+.fwed-enttags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.4rem 0 0.6rem;
+}
+.fwed-enttags-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.fwed-chip-x {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 0 0 0.25rem;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+.fwed-chip-x:hover {
+  color: var(--text);
+}
+/* The load-from-file row sits ABOVE the mint form, a section tool rather than a submit. */
+.fwed-load {
+  justify-content: flex-start;
+}
+/* The rename warning lives IN the form — toasts hide under the settings scrim, and this one
+   deserves a decision, not a glance. */
+.fwed-warn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border: 1.5px solid var(--k-question);
+  background-clip: padding-box;
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.7rem;
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+}
+.fwed-warn .fwed-warn-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.fwed-h2 {
+  margin-top: 1.1rem;
+}
+.fwed-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  margin: 0.4rem 0 0.2rem;
+}
+.fwed-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+.fwed-type input {
+  width: auto;
+  accent-color: var(--accent);
+}
+/* Settings tabs. */
+.settings-tabs {
+  display: flex;
+  gap: 0.3rem;
+  padding: 0 1.2rem;
+  border-bottom: 1px solid var(--divider);
+}
+.settings-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.86rem;
+  padding: 0.45rem 0.7rem;
+  cursor: pointer;
+}
+.settings-tab.on {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+/* Settings controls wear the panel's own ground (the VS Code settings
+   look): inputs and dropdowns sit flush on the background with a hairline border. */
+.settings-panel input:not([type='checkbox']):not([type='radio']),
+.settings-panel textarea,
+.settings-panel select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.settings-panel input:not([type='checkbox']):not([type='radio']):focus,
+.settings-panel textarea:focus,
+.settings-panel select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.settings-panel .fwed-row select {
+  background: var(--bg);
+}
+/* The framework on/off TOGGLE CHIP — purple when on, quiet pill when off. */
+.fwed-chip {
+  margin-left: auto;
+  font: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.22rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--faint);
+  cursor: pointer;
+}
+.fwed-chip.on {
+  background: var(--accent-bg, color-mix(in srgb, var(--accent) 22%, transparent));
+  border-color: var(--accent);
+  color: var(--accent-soft, var(--text));
+}
+.fwed-chip:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+/* The sliding framework switch: left = off, right = on, purple when on. */
+.fwed-switch {
+  margin-left: auto;
+  flex: none;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  position: relative;
+  cursor: pointer;
+  padding: 0;
+}
+.fwed-switch .fwed-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--faint);
+  transition: left 0.15s ease, background 0.15s ease;
+}
+.fwed-switch.on {
+  background: color-mix(in srgb, var(--accent) 35%, var(--bg));
+  border-color: var(--accent);
+}
+.fwed-switch.on .fwed-knob {
+  left: 18px;
+  background: var(--accent-soft, #b5abfc);
+}
+.fwed-switch:disabled {
+  cursor: default;
+  opacity: 0.8;
+}
+.fwed-state {
+  margin-left: auto;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.fwed-state + .fwed-switch {
+  margin-left: 0.5rem;
+}
+/* Map-tab TOGGLE TOKENS: purple = shown, dimmed outline = hidden. */
+.fwed-token {
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 0.26rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--faint);
+  cursor: pointer;
+}
+.fwed-token.on {
+  background: color-mix(in srgb, var(--accent) 22%, var(--bg));
+  border-color: var(--accent);
+  color: var(--accent-soft, var(--text));
+}
+/* Settings breathing room: buttons were clipping at edges. */
+.settings-section {
+  padding: 1rem 1.4rem 1.15rem;
+}
+.settings-panel {
+  overflow-x: hidden;
+}
+.settings-row > span {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  min-width: 0;
+}
+.settings-panel .pm-btn {
+  white-space: nowrap;
+  max-width: 100%;
+}
+/* Register row: status left, the act right. */
+.fwed-register {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin: 0.7rem 0 0.2rem;
+  flex-wrap: wrap;
+}
+
+/* Built-in framework rows: the description owns the middle (left-aligned, ellipsized) so the
+   name, text, and switch stop drifting into odd centered gaps. */
+.fwed-row .fwed-word {
+  flex: none;
+}
+.fwed-row .fwed-from {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* Rounded 1px strokes drop pixels in Firefox at fractional display zoom — the settings'
+   outlined controls get a 1.5px stroke (one full device pixel always paints) and
+   padding-box fills (the dark interior can't bleed into the antialiased border edge). */
+.settings-panel .pm-btn,
+.settings-panel .settings-choice,
+.fwed-token,
+.fwed-switch {
+  border-width: 1.5px;
+  background-clip: padding-box;
+}
+.settings-panel input:not([type='checkbox']):not([type='radio']),
+.settings-panel textarea,
+.settings-panel select {
+  background-clip: padding-box;
+}
+/* Relation rows and tokens read like Connections rows: [src kind] [chip] [dst kind]. */
+.fwed-rel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.fwed-kind {
+  display: inline-flex;
+  align-items: center;
+}
+.fwed-token {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}

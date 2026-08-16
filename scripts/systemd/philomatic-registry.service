@@ -1,0 +1,19 @@
+[Unit]
+Description=Philomatic — public track registry
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=philomatic
+WorkingDirectory=/home/philomatic/app
+# Storage OUTSIDE the app checkout so redeploys never touch published bundles.
+Environment=REGISTRY_DIR=/home/philomatic/registry-data
+Environment=REGISTRY_PORT=4400
+# Loopback: the reverse proxy (scripts/Caddyfile.example) owns the public face + TLS.
+Environment=REGISTRY_HOST=127.0.0.1
+ExecStart=/bin/bash -lc 'pnpm tsx src/registry/server.ts'
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

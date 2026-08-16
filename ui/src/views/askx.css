@@ -1,0 +1,154 @@
+/* Ask page — the "Shared Track" design (claude.ai/design import) expressed in OUR
+   tokens; Nocturne's palette IS the workbench palette, so every value maps. Layout classes are
+   askx-*; field/button primitives come from the shared layer (.pm-input/.pm-btn). The .ask-page
+   rules at the bottom style the server shell's static essentials only (noscript fallback). */
+
+@keyframes askx-arrive { from { opacity: 0; transform: translateY(-6px); box-shadow: 0 0 0 1px var(--accent); } to { opacity: 1; transform: none; box-shadow: 0 0 0 0 transparent; } }
+
+.askx { min-height: 100vh; display: flex; flex-direction: column; font-size: 15px; line-height: 1.55; }
+
+/* — share bar — */
+.askx-bar { display: flex; align-items: center; gap: 12px; padding: 0.6rem 1.2rem; border-bottom: 1px solid var(--divider); white-space: nowrap; flex-wrap: wrap; box-sizing: border-box; min-height: var(--topbar-h); }
+.askx-brand { display: flex; align-items: center; gap: 9px; font-weight: 500; font-size: 17px; }
+.askx-brand svg { color: var(--accent); }
+.askx-tag-outline { display: inline-flex; align-items: center; border: 1px solid var(--accent); color: var(--accent); font-size: 10px; letter-spacing: 0.08em; padding: 2px 8px; border-radius: 6px; flex: none; }
+.askx-spacer { flex: 1; }
+.askx-ghost-btn { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12.5px; color: var(--accent); background: none; border: none; padding: 0.3rem 0.4rem; border-radius: var(--radius-md); cursor: pointer; }
+.askx-ghost-btn:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.askx-cta { font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px; padding: 0.25rem 0.9rem; }
+
+/* — hero — */
+.askx-hero { padding: 26px 34px 20px; border-bottom: 1px solid var(--divider); display: flex; gap: 34px; align-items: flex-end; flex-wrap: wrap; }
+.askx-hero-main { flex: 1; min-width: 320px; display: flex; flex-direction: column; gap: 9px; }
+.askx-kicker { display: flex; align-items: center; gap: 8px; font-size: 10.5px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--accent); }
+.askx-hero h2 { margin: 0; font-size: 29px; line-height: 1.15; font-weight: 500; letter-spacing: -0.015em; }
+.askx-goal { margin: 0; max-width: 56ch; font-size: 13.5px; line-height: 1.6; color: var(--muted); text-wrap: pretty; }
+.askx-stats { display: flex; gap: 26px; padding-bottom: 4px; }
+.askx-stats > div { display: flex; flex-direction: column; gap: 2px; }
+.askx-stat-n { font-size: 23px; }
+.askx-stat-l { font-size: 11px; color: var(--muted); }
+
+/* — body grid — */
+/* The rail's rule runs the FULL height of the page, not the height of the form (05). The rail is sticky and therefore short — it has to be, or it cannot travel — so
+   the divider cannot be its border. It belongs to the COLUMN, which is why it is painted here,
+   from the one place that also decides how wide that column is. */
+.askx-grid { --askx-rail-w: 525px; position: relative; display: grid; grid-template-areas: 'left mid rail'; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--askx-rail-w); flex: 1; min-height: 0; align-items: start; }
+.askx-grid::after { content: ''; position: absolute; top: 0; bottom: 0; right: var(--askx-rail-w); width: 1px; background: var(--divider); pointer-events: none; }
+.askx-col-left { grid-area: left; }
+.askx-col-mid { grid-area: mid; padding-left: 0; }
+.askx-rail { grid-area: rail; }
+.askx-main { padding: 22px 34px 40px; display: flex; flex-direction: column; gap: 26px; min-width: 0; }
+.askx-section { display: flex; flex-direction: column; gap: 10px; }
+.askx-sec-head { display: flex; align-items: baseline; gap: 10px; }
+.askx-sec-head h5 { margin: 0; font-size: 15px; font-weight: 500; }
+.askx-sec-note { font-size: 11.5px; color: var(--muted); }
+/* An empty section still says what it is FOR — this page exists to collect recommendations, so
+   "none yet" is the invitation, not a gap. */
+.askx-empty { margin: 0; font-size: 12.5px; color: var(--muted); }
+.askx-target-label { font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 4px; }
+.askx-target-label.concept { color: var(--k-concept); }
+.askx-target-label.question { color: var(--k-question); }
+.askx-main .map-legend { position: static; margin: 0.1rem 0 0; border: none; background: none; padding: 0; flex-wrap: wrap; }
+/* The map fills the column: the publication page's 44px indent and 320px
+   cap would letterbox it here — full width under the heading, height following the aspect. */
+.askx-main .pub-map { height: min(520px, 56vh); }
+
+/* — source rows — */
+.askx-rows { display: flex; flex-direction: column; gap: 7px; }
+.askx-src { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: var(--radius-md); background: var(--surface); border: 1px solid transparent; }
+.askx-src:hover { background: color-mix(in srgb, var(--surface) 70%, var(--bg)); }
+.askx-src.fresh { border-color: color-mix(in srgb, var(--k-source) 55%, var(--bg)); animation: askx-arrive 0.5s ease-out; }
+.askx-src-n { flex: none; width: 19px; height: 19px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; border: 1px solid var(--line-strong); color: var(--muted); }
+.askx-src-n.rec-dot { border: 1.5px dashed var(--k-source); background: color-mix(in srgb, var(--k-source) 16%, transparent); }
+.askx-src-icon { flex: none; color: var(--muted); display: flex; }
+.askx-src-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.askx-src-title { font-size: 13.5px; line-height: 1.3; }
+.askx-src-title a { color: inherit; text-decoration: none; }
+.askx-src-title a:hover { color: var(--accent-soft); text-decoration: underline; }
+.askx-src-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
+.askx-tag-accent { flex: none; font-size: 10px; padding: 2px 8px; border-radius: 6px; border: 1px dashed color-mix(in srgb, var(--k-source) 60%, transparent); background: color-mix(in srgb, var(--k-source) 14%, var(--bg)); color: var(--accent-soft); }
+
+/* — concept cards — */
+.askx-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 9px; }
+.askx-card { display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 12px; border-radius: var(--radius-md); background: var(--surface); cursor: pointer; border: 1px solid var(--line); font: inherit; color: inherit; text-align: left; }
+.askx-card:hover { border-color: var(--line-strong); }
+.askx-card.on { border-color: var(--accent); }
+.askx-card-head { display: flex; align-items: center; gap: 8px; }
+.askx-card-head > svg, .askx-card-head > span:first-child { color: var(--k-concept); }
+.askx-card-name { font-size: 13.5px; flex: 1; }
+.askx-count { font-size: 10.5px; padding: 2px 8px; border-radius: 6px; color: var(--muted); background: color-mix(in srgb, var(--text) 8%, var(--bg)); flex: none; }
+.askx-count.none { color: var(--accent-soft); background: var(--accent-bg); }
+.askx-card-want { font-size: 11.5px; line-height: 1.5; color: var(--muted); }
+
+/* — open questions — */
+.askx-q { display: flex; align-items: flex-start; gap: 11px; padding: 11px 12px; border-radius: var(--radius-md); background: var(--surface); cursor: pointer; border: 1px solid transparent; font: inherit; color: inherit; text-align: left; }
+.askx-q:hover { background: color-mix(in srgb, var(--surface) 70%, var(--bg)); }
+.askx-q.on { border-color: var(--accent); }
+.askx-q-mark { flex: none; color: var(--k-question); margin-top: 2px; display: flex; }
+.askx-q-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.askx-q-title { font-size: 13.5px; line-height: 1.35; }
+.askx-q-age { font-size: 11px; color: var(--muted); }
+/* What the question hangs off — the concept it is about, or the source that
+   raised it. A contributor picking a question to answer needs to know what it is a question ABOUT
+   before they can find something that answers it. */
+.askx-q-tie { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 2px; }
+.askx-q-tie-item { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); min-width: 0; }
+.askx-q-tie-item svg { flex: none; }
+.askx-q-tie-item.concept svg { color: var(--k-concept); }
+.askx-q-tie-item.source svg { color: var(--k-source); }
+.askx-answer { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--muted); padding: 5px 9px; border-radius: 6px; background: color-mix(in srgb, var(--text) 8%, var(--bg)); }
+.askx-answer svg { color: var(--ok); flex: none; }
+.askx-answer-t { flex: 1; min-width: 0; }
+.askx-answer-by { font-size: 10.5px; color: var(--faint); flex: none; }
+.askx-q .askx-tag-outline { align-self: flex-start; margin-top: 2px; }
+
+/* — contribute rail — */
+.askx-rail { padding: 20px 20px 34px; display: flex; flex-direction: column; gap: 13px; position: sticky; top: 0; align-self: start; max-height: 100vh; overflow-y: auto; }
+.askx-rail-head { display: flex; align-items: center; gap: 8px; }
+.askx-rail-head svg { color: var(--accent); }
+.askx-rail-head h6 { margin: 0; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; }
+.askx-field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: color-mix(in srgb, var(--text) 70%, transparent); }
+.askx-field-note { color: var(--muted); font-weight: 400; }
+.askx-two { display: grid; grid-template-columns: 1fr 118px; gap: 9px; }
+.askx-seg { display: flex; overflow: hidden; border: 1px solid var(--divider); border-radius: var(--radius-md); }
+.askx-seg-opt { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 12px; font-size: 13px; cursor: pointer; color: var(--text); }
+.askx-seg-opt + .askx-seg-opt { border-left: 1px solid var(--divider); }
+.askx-seg-opt.on { color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.askx-seg-opt:not(.on):hover { background: color-mix(in srgb, var(--text) 7%, transparent); }
+.askx-seg-opt input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+.askx-hint { display: flex; gap: 6px; align-items: flex-start; font-size: 11px; color: var(--muted); }
+.askx-hint svg { flex: none; margin-top: 1px; }
+.askx-submit { width: 100%; justify-content: center; display: inline-flex; align-items: center; gap: 6px; margin-top: 2px; }
+.askx-done { color: var(--ok); font-size: 12px; }
+.askx-fail { color: var(--danger); font-size: 12px; }
+.askx-divider { height: 1px; background: var(--divider); margin: 3px 0; }
+
+/* — activity — */
+.askx-activity { display: flex; flex-direction: column; gap: 8px; }
+.askx-act { display: flex; gap: 9px; align-items: flex-start; padding: 7px 8px; border-radius: var(--radius-md); }
+.askx-act.fresh { background: var(--accent-bg); animation: askx-arrive 0.5s ease-out; }
+.askx-avatar { flex: none; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10.5px; background: color-mix(in srgb, var(--text) 8%, var(--bg)); color: var(--muted); border: 1px solid var(--line); }
+.askx-act-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.askx-act-line { font-size: 12px; line-height: 1.4; color: var(--muted); }
+.askx-act-line em { font-style: normal; color: var(--accent-soft); }
+.askx-act-what { color: var(--text); }
+.askx-act-when { font-size: 10.5px; color: var(--faint); }
+.askx-foot { margin-top: 4px; color: var(--faint); font-size: 11.5px; line-height: 1.5; }
+.askx-foot a { color: var(--accent-soft); }
+
+/* — server-shell static essentials (noscript fallback only; React replaces with .askx) — */
+.ask-page { margin: 0 auto; max-width: 680px; padding: 2rem 1rem 4rem; font-size: 15px; line-height: 1.6; }
+.ask-page h1 { font-size: 1.35rem; margin: 0 0 0.2rem; }
+.ask-page h2 { font-size: 0.95rem; color: var(--accent-soft); letter-spacing: 0.04em; margin: 1.6rem 0 0.4rem; }
+.ask-goal { color: var(--muted); margin: 0 0 0.4rem; }
+.ask-until { color: var(--raised); font-size: 0.82rem; margin: 0 0 1.4rem; }
+.ask-page ul { padding-left: 1.2rem; margin: 0.2rem 0; }
+.ask-page li { margin: 0.2rem 0; }
+.ask-page .chip { margin: 0 0.3rem 0.3rem 0; }
+.ask-have { color: var(--muted); padding-left: 1.4rem; }
+.ask-by { color: var(--faint); }
+
+/* Embedded in the publication page's Contributions tab: the page chrome above is
+   the pub page's; the askx block is content, not a viewport. */
+.askx-embedded { min-height: 0; }
+

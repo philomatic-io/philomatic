@@ -1,0 +1,9 @@
+{
+  "id": "philomatic",
+  "name": "Philomatic",
+  "version": "0.1.0",
+  "minAppVersion": "1.4.0",
+  "description": "Embed your Philomatic learning graph in notes — questions, snippets, sources — backed by your self-hosted server.",
+  "author": "Ty",
+  "isDesktopOnly": true
+}

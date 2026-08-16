@@ -1,0 +1,22 @@
+[Unit]
+Description=Philomatic — personal instance (workbench + library + ask links)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=philomatic
+WorkingDirectory=/home/philomatic/app
+# Your library lives OUTSIDE the app checkout so redeploys never touch it.
+Environment=INGEST_DB=/home/philomatic/data/philomatic.sqlite
+Environment=INGEST_PORT=4321
+# Loopback on purpose: the reverse proxy (scripts/Caddyfile.example) terminates TLS and owns
+# what is public (/ask/*, /t/*) vs. behind auth (everything else).
+# Optional extras:
+#   Environment=REGISTRY_URL=https://philomatic.io     # the workbench's community section
+#   Environment=LLM_BASE_URL=…  LLM_MODEL=…            # enables Suggest structure (off = privacy default)
+ExecStart=/bin/bash -lc 'pnpm serve'
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

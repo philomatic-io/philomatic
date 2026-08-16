@@ -1,0 +1,12 @@
+[Unit]
+Description=Philomatic — pull the public release and redeploy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=philomatic
+WorkingDirectory=/home/philomatic/app
+# A login shell so node/pnpm from the deploy user's profile (corepack/nvm) are on PATH.
+# If pnpm isn't found, hardcode its dir here instead: Environment=PATH=/usr/bin:/bin:<pnpm dir>
+ExecStart=/bin/bash -lc '/home/philomatic/app/scripts/deploy.sh'

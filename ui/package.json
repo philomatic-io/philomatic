@@ -1,0 +1,30 @@
+{
+  "name": "philomatic-ui",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The viewer (alpha UI) — a React client of the engine's versioned JSON read contract",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build && vite build --config vite.public.config.ts",
+    "typecheck": "tsc --noEmit",
+    "public:build": "vite build --config vite.public.config.ts"
+  },
+  "dependencies": {
+    "@noble/hashes": "^2.2.0",
+    "@phosphor-icons/react": "^2.1.10",
+    "d3-force": "^3.0.0",
+    "katex": "^0.18.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.2.2",
+    "@types/d3-force": "^3.0.10",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.7"
+  }
+}

@@ -1,0 +1,22 @@
+/* Registry library page layout — page-scoped classes; palette from tokens.css.
+   `.reg-page .chip` overrides the workbench chip look with the registry's quiet outline chip
+   (specificity does the work — same class name, page-scoped restyle). */
+.reg-page { margin: 0 auto; max-width: 760px; padding: 2rem 1rem; font-size: 15px; line-height: 1.6; }
+.reg-page h1 { font-size: 1.3rem; }
+.reg-page h1 span { color: var(--faint); font-size: 0.85rem; margin-left: 0.6rem; }
+.reg-page ul { list-style: none; padding: 0; }
+.reg-page li { padding: 0.7rem 0.2rem; border-bottom: 1px solid var(--chip-bg); }
+.reg-page a { color: var(--accent-soft); text-decoration: none; font-size: 1.02rem; }
+.reg-page a:hover { text-decoration: underline; }
+.reg-page .goal { display: block; color: var(--muted); font-size: 0.88rem; }
+.reg-page .meta { display: block; color: var(--faint); font-size: 0.82rem; }
+.reg-page .key { color: var(--line-strong); font-size: 0.72rem; font-family: ui-monospace, monospace; }
+.reg-page .chips { display: block; margin-top: 0.3rem; }
+.reg-page .chip { display: inline-block; background: none; border: 1px solid var(--chip-border); border-radius: 999px; padding: 0.04rem 0.5rem; margin: 0 0.25rem 0.25rem 0; font-size: 0.74rem; color: var(--k-concept); }
+/* pm-input variation: full-width, surface-2 against the page bg (the form-card contrast rule). */
+.reg-page #q { width: 100%; box-sizing: border-box; margin: 0.6rem 0; background: var(--surface-2); }
+.reg-facets { margin: 0 0 0.6rem; }
+.reg-facets .chip { cursor: pointer; user-select: none; font: inherit; font-size: 0.74rem; }
+.reg-facets .chip.on { border-color: var(--k-concept); background: color-mix(in srgb, var(--k-concept) 12%, var(--bg)); }
+.reg-empty, .reg-none { color: var(--muted); }
+.reg-page footer { margin-top: 2rem; color: var(--faint); font-size: 0.8rem; }

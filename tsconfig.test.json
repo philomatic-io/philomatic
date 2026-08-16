@@ -1,0 +1,16 @@
+/*
+ * The TEST program.
+ *
+ * Tests span both worlds: they drive the Node engine AND import UI libs (lib/outline,
+ * lib/map-scope, lib/snippet-md…). The root config is deliberately DOM-LESS, so `document` or
+ * `window` in engine or server code is a compile error — but that guardrail must not extend to
+ * the browser files the tests legitimately import. So `src` keeps the DOM-less guardrail and
+ * the tests get the DOM libs they actually run against. `pnpm typecheck` runs both programs.
+ */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+  },
+  "include": ["test"]
+}

@@ -1,0 +1,9 @@
+[Unit]
+Description=Poll the public repo for new Philomatic releases (runs philomatic-deploy.service)
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+
+[Install]
+WantedBy=timers.target

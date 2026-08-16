@@ -1,0 +1,34 @@
+node_modules/
+dist/
+dist-demo/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.DS_Store
+.devcontainer/
+archived/
+dist-extension/
+dist-extension-firefox/
+scratch.md
+
+# Local database (default `.philomatic/philomatic.sqlite`)
+.philomatic/
+
+# Obsidian plugin build output (composed into the vault, not committed)
+obsidian/main.js
+obsidian/data.json
+.philomatic-registry/
+
+# Operator secrets and local deployment state — never committed. DEPLOY.md is the owner's
+# personal runbook (2026-08-02) and .secrets/ holds OAuth credentials, the session secret and
+# any KEK: a `git add -A` must not be able to reach them.
+.secrets/
+DEPLOY.md
+.philomatic-registry-local/
+
+# Security review notes — local only (see the file header)
+SECURITY_REVIEW.md
+*.framework.json
+
+# Deprecated/private docs — local working copies only; the pre-recut history is the archive.
+dep/

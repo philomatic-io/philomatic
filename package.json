@@ -1,0 +1,58 @@
+{
+  "name": "philomatic",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Headless learning-graph engine (MVP core)",
+  "type": "module",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "philomatic": "src/cli/index.ts"
+  },
+  "scripts": {
+    "philomatic": "tsx src/cli/index.ts",
+    "serve": "tsx src/server/ingest.ts",
+    "ui:dev": "pnpm --filter philomatic-ui dev",
+    "ui:build": "pnpm --filter philomatic-ui build",
+    "build:extension": "node scripts/build-extension.mjs",
+    "diagram": "tsx scripts/generate-diagram.ts",
+    "package:extension": "node scripts/package-extension.mjs",
+    "test": "vitest run --exclude \"test/ui-smoke/**\" --exclude \"**/node_modules/**\"",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json --noEmit && tsc -p src/extension/tsconfig.json --noEmit",
+    "obsidian:build": "pnpm --filter philomatic-obsidian build",
+    "obsidian:dev": "pnpm --filter philomatic-obsidian dev",
+    "test:ui": "pnpm ui:build && vitest run test/ui-smoke",
+    "test:all": "pnpm test && pnpm test:ui",
+    "lint": "eslint src ui/src test",
+    "comments:report": "node scripts/comments-report.mjs"
+  },
+  "dependencies": {
+    "@noble/curves": "^2.2.0",
+    "@noble/hashes": "^2.2.0",
+    "better-sqlite3-multiple-ciphers": "^11.10.0",
+    "drizzle-orm": "^0.38.3",
+    "pdfjs-dist": "^6.1.200",
+    "sql.js": "^1.14.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/chrome": "^0.2.2",
+    "@types/node": "^22.10.7",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@types/sql.js": "^1.4.11",
+    "eslint": "^10.8.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "playwright-core": "^1.61.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tsx": "^4.23.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.67.0",
+    "vitest": "^2.1.8"
+  }
+}

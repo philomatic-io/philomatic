@@ -1,0 +1,220 @@
+{
+  "framework": "philomatic-core",
+  "version": 1,
+  "description": "Philomatic's built-in vocabulary — the tags that carry meaning on generic edges (LINK / ABOUT / INCLUDES) and the overlay metadata vocabularies. The engine never interprets these; UIs render them and (F1, later) validation rules report over them.",
+  "edgeTags": [
+    {
+      "name": "Explains",
+      "inverseLabel": "explained by",
+      "on": {
+        "type": "ABOUT",
+        "srcKind": "source",
+        "dstKind": "concept"
+      },
+      "direction": "directed",
+      "description": "covers the theory — a candidate pool, never auto-pulled into a track",
+      "publish": true
+    },
+    {
+      "name": "Demonstrates",
+      "on": {
+        "type": "ABOUT",
+        "srcKind": "source",
+        "dstKind": "concept"
+      },
+      "direction": "directed",
+      "description": "shows the concept applied in practice",
+      "publish": true
+    },
+    {
+      "name": "Exercises",
+      "on": {
+        "type": "ABOUT",
+        "srcKind": "source",
+        "dstKind": "concept"
+      },
+      "direction": "directed",
+      "description": "interactive — tests the concept hands-on",
+      "publish": true
+    },
+    {
+      "name": "Seminal",
+      "on": {
+        "type": "INCLUDES",
+        "srcKind": "track",
+        "dstKind": "source"
+      },
+      "direction": "directed",
+      "description": "the cornerstone source of this track",
+      "publish": true
+    },
+    {
+      "name": "Foundational",
+      "on": {
+        "type": "INCLUDES",
+        "srcKind": "track",
+        "dstKind": "concept"
+      },
+      "direction": "directed",
+      "description": "a concept this track is built around",
+      "publish": true
+    },
+    {
+      "name": "Refines",
+      "on": {
+        "type": "LINK",
+        "srcKind": "question",
+        "dstKind": "question"
+      },
+      "direction": "directed",
+      "inverseLabel": "refined by",
+      "description": "sharpens a broader question",
+      "publish": true
+    },
+    {
+      "name": "Complements",
+      "on": {
+        "type": "LINK",
+        "srcKind": "track",
+        "dstKind": "track"
+      },
+      "direction": "symmetric",
+      "description": "these two tracks go well together",
+      "publish": true
+    },
+    {
+      "name": "AnalogousTo",
+      "on": {
+        "type": "LINK",
+        "srcKind": "concept",
+        "dstKind": "concept"
+      },
+      "direction": "symmetric",
+      "description": "these two concepts rhyme — understanding one helps with the other",
+      "publish": true
+    },
+    {
+      "name": "IsEvidenceFor",
+      "on": {
+        "type": "LINK",
+        "srcKind": "concept",
+        "dstKind": "concept"
+      },
+      "direction": "directed",
+      "description": "supports or substantiates that concept",
+      "publish": true,
+      "polarity": "for"
+    },
+    {
+      "name": "SubfieldOf",
+      "on": {
+        "type": "LINK",
+        "srcKind": "concept",
+        "dstKind": "concept"
+      },
+      "direction": "directed",
+      "inverseLabel": "superfield of",
+      "description": "this field of study specializes that one (ML #SubfieldOf CS) — taxonomy, NOT learning order: a subfield is not a prerequisite (PREREQUISITE_OF stays the sequencing primitive). Fields ARE concepts when they are things you learn about; classifying OTHER entities into a field stays a #domain:* tag",
+      "hierarchy": "taxonomy",
+      "hierarchyRole": "parent",
+      "publish": true
+    },
+    {
+      "name": "TopicOf",
+      "on": {
+        "type": "LINK",
+        "srcKind": "concept",
+        "dstKind": "concept"
+      },
+      "direction": "directed",
+      "inverseLabel": "parent topic of",
+      "description": "this concept is subject matter WITHIN that field (Normality #TopicOf Descriptive Statistics) — the middle rung of the taxonomy: #SubfieldOf is field-inside-field, #TopicOf is topic-inside-field, and classifying non-concept entities into a field stays a #domain:* tag. Not learning order (PREREQUISITE_OF) and not containment of meaning — a topic can belong to several fields",
+      "hierarchy": "taxonomy",
+      "hierarchyRole": "attachment",
+      "publish": true
+    },
+    {
+      "name": "DrawsOn",
+      "on": {
+        "type": "LINK",
+        "srcKind": "concept",
+        "dstKind": "concept"
+      },
+      "direction": "directed",
+      "inverseLabel": "informs",
+      "description": "this field borrows methods or results from that one (Cognitive Science #DrawsOn Linguistics) — interdisciplinary influence, weaker than #SubfieldOf and looser than #IsEvidenceFor",
+      "publish": true
+    },
+    {
+      "name": "RefersTo",
+      "on": {
+        "type": "LINK",
+        "srcKind": "source",
+        "dstKind": "source"
+      },
+      "direction": "directed",
+      "inverseLabel": "referenced by",
+      "description": "keep that source at hand while working through this one",
+      "publish": true
+    },
+    {
+      "name": "Expands",
+      "on": {
+        "type": "LINK",
+        "srcKind": "source",
+        "dstKind": "source"
+      },
+      "direction": "directed",
+      "description": "goes deeper than that one",
+      "publish": true
+    },
+    {
+      "name": "DerivativeOf",
+      "on": {
+        "type": "LINK",
+        "srcKind": "source",
+        "dstKind": "source"
+      },
+      "direction": "directed",
+      "description": "based on that one — a summary, translation, or adaptation",
+      "publish": true
+    }
+  ],
+  "entityTags": [
+    {
+      "name": "difficulty",
+      "degree": true,
+      "description": "How demanding this is, 1-5. NOT published (owner, 2026-08-03): difficulty is relative to the reader, so one learner's 3 is another's 1 — publishing it states a fact about the work that is really a fact about the person. Note it was never engine-recognised before 2026-08-03 despite being the canonical degree-tag EXAMPLE in four source comments. A framework of one's own may declare it publishable — core's judgement binds core, not every framework."
+    },
+    {
+      "name": "NeedsSources",
+      "on": [
+        "concept"
+      ],
+      "publish": true,
+      "description": "A published REQUEST FOR HELP: this concept is a declared gap. It must travel with the bundle because the unified track/contributions page (B-D12) renders from the PUBLISHED state — and a registry hosting that page has no live engine to ask. Considered for stripping 2026-08-03 as a private judgement; that reasoning was wrong, because the flag is the mechanism by which contributions are invited, not an opinion about one's own work."
+    }
+  ],
+  "metadataFields": [
+    {
+      "name": "sentiment",
+      "on": {
+        "type": "ANNOTATES"
+      },
+      "vocabulary": [
+        {
+          "token": "aha",
+          "label": "aha"
+        },
+        {
+          "token": "pondering",
+          "label": "pondering"
+        },
+        {
+          "token": "confused",
+          "label": "confused"
+        }
+      ]
+    }
+  ]
+}

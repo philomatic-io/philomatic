@@ -1,0 +1,50 @@
+/* Philomatic design tokens — THE one styling rule.
+   Every surface that renders Philomatic consumes this file: the workbench bundle imports it
+   (styles.css `@import`), and the server-rendered public pages (the registry library page,
+   the ask page) inline it into their <style>. Change a value here and every surface follows;
+   define a color anywhere else and you are re-creating the drift this file exists to kill.
+   Nocturne: dark, Inter, purple accent — tokens lifted from the agreed mockup. */
+:root {
+  --bg: #161826;
+  --surface: #232532;
+  --surface-2: #1c1e2b;
+  --text: #e9e9ed;
+  --muted: #9397ab;
+  --faint: #75798c;
+  --accent: #9184d9;
+  --accent-soft: #b5abfc;
+  --accent-bg: #2b2741;
+  --divider: color-mix(in srgb, #e9e9ed 14%, transparent);
+  --line: #3f424d;
+  --line-strong: #595d6c;
+  --chip-bg: #2b2d3a;
+  --chip-border: #3f424d;
+  --danger: #e07a63;
+  --ok: #7fcf9f;
+  --raised: #e0b15e; /* amber — a question raised by a snippet; also "needs attention" */
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+  --shadow-md: 0 0 0 1px #595d6c, 0 6px 18px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 0 0 1px #9397ab, 0 16px 40px rgba(0, 0, 0, 0.65);
+
+  /* Node-kind accents (shared by list glyphs, chips, and every map). */
+  /* How tall a top bar is. The workbench, the ask page and the registry are
+     three servers rendering three stylesheets, and their rules landed at three different heights
+     when tiled side by side. 58px is the workbench's own measured height (57.77), rounded — so
+     the surface everything else is compared against does not move. */
+  --topbar-h: 58px;
+
+  --k-track: #d2cefd;
+  --k-concept: #8fd0c4;
+  --k-source: #9184d9;
+  --k-snippet: #e6c47a;
+  --k-question: #e39ca8;
+
+  /* Concept-rank scale (framework taxonomy): deeper green the higher the rank; 'plain' stays
+     --k-concept. Used by map node sizing/coloring and taxonomy hulls. */
+  --rank-field: #17a67f;
+  --rank-subfield: #4fbca6;
+  --rank-topic: #8fd0c4;
+}
