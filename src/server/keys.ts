@@ -74,3 +74,4 @@ export function resolveDEK(keyPath: string, kek: Kek): Buffer {
   writeFilePrivate(keyPath, kek.wrap(dek));
   return dek;
 }
+

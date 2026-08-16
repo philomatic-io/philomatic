@@ -5,11 +5,12 @@
  * to start.
  */
 import { describe, it, expect, afterEach } from 'vitest';
-import { mkdtempSync, readFileSync, existsSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { aesKek, envKek, generateDEK, resolveDEK } from '../src/server/keys';
+import { encryptLibraries, encryptRegistry } from '../src/server/migrate-encrypt';
 import { PhilomaticEngine } from '../src/engine';
 import { EnginePool } from '../src/server/tenancy';
 import { createIngestServer } from '../src/server/ingest';
@@ -143,5 +144,59 @@ describe('R2 — a hosted server refuses to run plaintext', () => {
     for (const suffix of ['', '-wal', '-shm']) rmSync(`${dbPath}${suffix}`, { force: true });
     rmSync(keyPath, { force: true });
     expect(existsSync(keyPath), 'the key file is gone with the library').toBe(false);
+  });
+});
+
+describe('migrate-encrypt — plaintext deployment → encrypted', () => {
+  it('encrypts plaintext libraries in place, keeps data, and is idempotent', () => {
+    const dir = tmp();
+    const kek = aesKek(randomBytes(32));
+    // Two plaintext libraries with data.
+    for (const acc of ['acc_a', 'acc_b']) {
+      const e = PhilomaticEngine.open(join(dir, `${acc}.sqlite`));
+      e.captureSource({ url: `https://ex.com/${acc}`, title: `Title ${acc}` });
+      e.close();
+    }
+    expect(readFileSync(join(dir, 'acc_a.sqlite')).includes('Title acc_a'), 'plaintext before').toBe(true);
+
+    const { encrypted, skipped } = encryptLibraries(dir, kek);
+    expect(encrypted.sort()).toEqual(['acc_a.sqlite', 'acc_b.sqlite']);
+    expect(skipped).toEqual([]);
+
+    // Now ciphertext on disk, and readable with the wrapped key.
+    expect(readFileSync(join(dir, 'acc_a.sqlite')).includes('Title acc_a'), 'ciphertext after').toBe(false);
+    expect(existsSync(join(dir, 'acc_a.key'))).toBe(true);
+    const dek = resolveDEK(join(dir, 'acc_a.key'), kek);
+    const reopened = PhilomaticEngine.open(join(dir, 'acc_a.sqlite'), { key: dek });
+    expect(reopened.snapshot().sources[0]!.title).toBe('Title acc_a');
+    reopened.close();
+
+    // Idempotent: a second run skips both (they now have keys).
+    const again = encryptLibraries(dir, kek);
+    expect(again.encrypted).toEqual([]);
+    expect(again.skipped.sort()).toEqual(['acc_a.sqlite', 'acc_b.sqlite']);
+  });
+
+  it('encrypts a plaintext registry directory, and is idempotent', () => {
+    const dir = tmp();
+    const kek = aesKek(randomBytes(32));
+    // Plaintext private files as a pre-encryption registry would have written them.
+    writeFileSync(join(dir, 'accounts.json'), JSON.stringify({ version: 1, accounts: [{ id: 'acc_x', email: 'a@b.co' }] }));
+    writeFileSync(join(dir, 'index.json'), JSON.stringify({ syl_t: { trackId: 'syl_t', community: { invite: { token: 'SEEKRET' } } } }));
+
+    const { encrypted, skipped } = encryptRegistry(dir, kek);
+    expect(skipped).toBe(false);
+    expect(encrypted).toContain('accounts.json');
+    expect(encrypted).toContain('index.json');
+    expect(existsSync(join(dir, 'registry.key'))).toBe(true);
+
+    // Ciphertext on disk (the invite token no longer leaks), decryptable with the registry DEK.
+    expect(readFileSync(join(dir, 'index.json')).includes('SEEKRET')).toBe(false);
+    const dek = resolveDEK(join(dir, 'registry.key'), kek);
+    const idx = JSON.parse(aesKek(dek).unwrap(readFileSync(join(dir, 'index.json'))).toString('utf8')) as Record<string, { community?: { invite?: { token?: string } } }>;
+    expect(idx.syl_t!.community!.invite!.token).toBe('SEEKRET');
+
+    // Idempotent: registry.key present → skipped whole.
+    expect(encryptRegistry(dir, kek).skipped).toBe(true);
   });
 });

@@ -67,3 +67,19 @@ export function openDb(path = ':memory:', key?: Buffer): { db: DB; sqlite: Sqlit
   const db = drizzle(sqlite, { schema });
   return { db, sqlite };
 }
+
+/**
+ * Encrypt an existing PLAINTEXT database in place with `key`: `pragma rekey` rewrites every page
+ * encrypted (data preserved). For the plaintext→encrypted migration only — a database that is
+ * already encrypted cannot be rekeyed without its current key and must be skipped by the caller.
+ */
+export function rekeyDb(dbPath: string, key: Buffer): void {
+  if (key.length !== 32) throw new Error('database key must be 32 bytes');
+  const sqlite = new Database(dbPath);
+  try {
+    sqlite.pragma("cipher='sqlcipher'");
+    sqlite.pragma(`rekey="x'${key.toString('hex')}'"`);
+  } finally {
+    sqlite.close();
+  }
+}

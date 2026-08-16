@@ -26,10 +26,20 @@ export function registryDEK(dir: string, kek: Kek | undefined): Buffer | undefin
   return kek === undefined ? undefined : resolveDEK(join(dir, 'registry.key'), kek);
 }
 
-/** Read a private JSON file: decrypt when a DEK is in force, else parse plaintext. */
+/** Read a private JSON file: decrypt when a DEK is in force, else parse plaintext. A decrypt
+ *  failure is almost always a key-mode mismatch (a KEK was added to, or changed on, a directory
+ *  written in the other mode) — say so, instead of leaking node's cryptic GCM error. */
 export function readPrivateJson<T>(path: string, dek: Buffer | undefined): T {
   const raw = readFileSync(path);
-  const text = dek === undefined ? raw.toString('utf8') : aesKek(dek).unwrap(raw).toString('utf8');
+  if (dek === undefined) return JSON.parse(raw.toString('utf8')) as T;
+  let text: string;
+  try {
+    text = aesKek(dek).unwrap(raw).toString('utf8');
+  } catch {
+    throw new Error(
+      `could not decrypt ${path}: it looks written in a different key-mode. If this deployment ran plaintext before, run \`philomatic migrate-encrypt\` once; if the KEK changed, restore the original PHILOMATIC_KEK.`,
+    );
+  }
   return JSON.parse(text) as T;
 }
 
