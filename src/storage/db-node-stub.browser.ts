@@ -10,3 +10,10 @@ export type { DB, SqliteConn } from './db';
 export function openDb(): never {
   throw new Error('openDb (better-sqlite3) is not available in the browser build — use PhilomaticEngine.openBrowser');
 }
+
+// Re-exported through the engine facade for the server-tier migration; never reachable in a
+// browser bundle (encryption at rest is a hosted-server concern), but the export must exist so
+// the facade resolves against this stub.
+export function rekeyDb(): never {
+  throw new Error('rekeyDb (SQLCipher) is not available in the browser build');
+}
