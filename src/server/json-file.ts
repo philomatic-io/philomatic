@@ -9,9 +9,14 @@ import { chmodSync, mkdirSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 export function writeJsonPrivate(path: string, value: unknown): void {
+  writeFilePrivate(path, JSON.stringify(value, null, 2));
+}
+
+/** The same atomic-0600 discipline for raw bytes — wrapped key material rides this. */
+export function writeFilePrivate(path: string, data: string | Buffer): void {
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
   const tmp = `${path}.tmp`;
-  writeFileSync(tmp, JSON.stringify(value, null, 2), { mode: 0o600 });
+  writeFileSync(tmp, data, { mode: 0o600 });
   renameSync(tmp, path);
   chmodSync(path, 0o600);
 }

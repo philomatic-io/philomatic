@@ -32,6 +32,7 @@ import { extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_LEARNER, FRAMEWORKS, loadFrameworkDoc, parseFrameworkFile, PhilomaticEngine, READ_VERSION, saveFrameworkDoc, sourceId, ViewOverridesSchema } from '../engine';
 import { cachedVerifier, EnginePool, hostedTenants, originAllowed, presentedToken, registryVerifier, sessionVerifier, singleTenant, type TenantResolver } from './tenancy';
+import { envKek, resolveDEK, type Kek } from './keys';
 import { safeFetch } from './safe-fetch';
 import { callerKey, RateLimiter } from './rate-limit';
 import { loadConfig, type ServerConfig } from './config';
@@ -119,6 +120,9 @@ export interface ServerOptions {
   /** Pre-loaded settings; omitted, they come from the config file and the environment. */
   config?: ServerConfig;
   tenants?: TenantResolver;
+  /** The key-encryption key for at-rest encryption. Omitted → `PHILOMATIC_KEK` from the env
+   *  (and, in production, the KMS adapter). Tests inject one directly. */
+  kek?: Kek;
   pool?: { cap?: number; idleMs?: number };
   /** Loopback host to bind. Default: 127.0.0.1 (local-first;). */
   host?: string;
@@ -234,6 +238,20 @@ export function createIngestServer(opts: ServerOptions = {}): Server {
     mkdirSync(dataDir, { recursive: true, mode: 0o700 });
     chmodSync(dataDir, 0o700);
   }
+  // Encryption at rest for hosted libraries. A configured KEK means every library is minted
+  // encrypted (its DEK wrapped beside it); no KEK means plaintext. On a HOSTED server that is a
+  // refusal, not a fallback: multi-tenant plaintext is a mistake nobody notices until it
+  // matters, so an operator must either configure a key or say `PHILOMATIC_ALLOW_PLAINTEXT=1`
+  // out loud. Single-tenant (one person, their own machine) stays plaintext by default.
+  const kek = opts.kek ?? envKek();
+  if (hosting && kek === undefined && process.env.PHILOMATIC_ALLOW_PLAINTEXT !== '1') {
+    throw new Error(
+      'hosting stores other people’s libraries: set PHILOMATIC_KEK (or PHILOMATIC_KMS_KEY) to encrypt them at rest, or set PHILOMATIC_ALLOW_PLAINTEXT=1 to accept plaintext deliberately.',
+    );
+  }
+  /** The raw DEK for a tenant's library, or undefined when encryption is off. Called only on a
+   *  pool open (never on a cache hit), so the unwrap cost is per library-open, not per request. */
+  const keyFor = (tenant: { keyPath?: string }) => () => (tenant.keyPath !== undefined && kek !== undefined ? resolveDEK(tenant.keyPath, kek) : undefined);
   // Capture and the propose chain ask this server to fetch a URL somebody typed. On a hosted
   // instance that somebody is a stranger, so the fetch is guarded: no loopback, no private
   // range, no link-local, and every redirect re-checked (safe-fetch.ts). Single-tenant is left
@@ -303,6 +321,7 @@ export function createIngestServer(opts: ServerOptions = {}): Server {
           // host holds no SESSION_SECRET: one question to the registry answers signature AND
           // revocation, and the signing key stays in one process.
           verifySession: cachedVerifier(sessionVerifier(registryUrl!), { ttlMs: verifyTtlMs }),
+          encrypted: kek !== undefined,
         })
       : singleTenant(dbPath));
 
@@ -499,7 +518,7 @@ export function createIngestServer(opts: ServerOptions = {}): Server {
       if (method === 'POST' && path === '/account/library') {
         // The act itself. Opening the database is what creates the file — the same call every
         // other request makes, so there is no second creation path to keep in step.
-        await pool.withEngine(tenant.dbPath, () => undefined);
+        await pool.withEngine(tenant.dbPath, () => undefined, keyFor(tenant));
         sendJson(res, 200, { created: true, accountId: tenant.accountId });
         return;
       }
@@ -530,10 +549,19 @@ export function createIngestServer(opts: ServerOptions = {}): Server {
           /* already gone */
         }
       }
+      // The wrapped DEK goes too: with the library gone its key is meaningless, and leaving it
+      // would strand a key file the next provision would then refuse to overwrite.
+      if (tenant.keyPath !== undefined) {
+        try {
+          rmSync(tenant.keyPath);
+        } catch {
+          /* already gone (or plaintext library — no key file) */
+        }
+      }
       sendJson(res, 200, { deleted: true });
       return;
     }
-    return pool.withEngine(tenant.dbPath, (engine) => handle(req, res, engine, tenant.accountId, tenant.dbPath));
+    return pool.withEngine(tenant.dbPath, (engine) => handle(req, res, engine, tenant.accountId, tenant.dbPath), keyFor(tenant));
   }
 
   /**

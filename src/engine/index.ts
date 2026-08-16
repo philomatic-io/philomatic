@@ -230,8 +230,8 @@ export class PhilomaticEngine {
     return { backupPath };
   }
 
-  static open(path = ':memory:', opts: { now?: () => number } = {}): PhilomaticEngine {
-    const { db, sqlite } = openDb(path);
+  static open(path = ':memory:', opts: { now?: () => number; key?: Buffer } = {}): PhilomaticEngine {
+    const { db, sqlite } = openDb(path, opts.key);
     return new PhilomaticEngine(db, sqlite, opts.now ?? (() => Date.now()), path === ':memory:' ? undefined : path);
   }
 
