@@ -61,6 +61,20 @@ export function cspForInlinePage(html: string): string {
   return CSP.replace("script-src 'self' 'wasm-unsafe-eval'", `script-src 'self' 'wasm-unsafe-eval' ${[...hashes].join(' ')}`);
 }
 
+/**
+ * The intro slideshow loads reveal.js from jsdelivr and runs one inline init script. It renders
+ * no user data and takes no input, but we still keep the strict base and widen it as little as
+ * possible: the inline init is allowed by its own HASH (via `cspForInlinePage`), and only the
+ * jsdelivr host is added to script/style/font — never a blanket `'unsafe-inline'` for scripts.
+ */
+export function cspForSlides(html: string): string {
+  const CDN = 'https://cdn.jsdelivr.net';
+  return cspForInlinePage(html)
+    .replace("script-src 'self' 'wasm-unsafe-eval'", `script-src 'self' 'wasm-unsafe-eval' ${CDN}`)
+    .replace("style-src 'self' 'unsafe-inline'", `style-src 'self' 'unsafe-inline' ${CDN}`)
+    .replace("font-src 'self' data:", `font-src 'self' data: ${CDN}`);
+}
+
 /** Headers every HTML/asset response carries. */
 export const SECURITY_HEADERS: Record<string, string> = {
   'Content-Security-Policy': CSP,
