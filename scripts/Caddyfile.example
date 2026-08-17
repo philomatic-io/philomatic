@@ -1,23 +1,21 @@
 # Philomatic reverse-proxy example (Caddy v2 — automatic HTTPS).
 #
-# ONE ORIGIN, path-routed (multiuser M-D1, 2026-08-07). Two processes, one hostname:
+# ONE ORIGIN, path-routed. Two processes, one hostname:
 #
 #   /            → the registry (library index, /t/* track pages, /signin, /auth/*, /account,
-#                  /demo, /intro, /index.json, /publish …)          — 127.0.0.1:4400
-#   /app*        → YOUR workbench + its API (run with BASE_PATH=/app) — 127.0.0.1:4321
+#                  /intro, /index.json, /publish …)                  — 127.0.0.1:4400
+#   /app*        → the workbench + its API (run with BASE_PATH=/app)  — 127.0.0.1:4321
 #   /assets/*    → the built UI bundle. BOTH processes read the same ui/dist, so routing all
 #                  assets to the instance serves the registry's /t pages too (they reference
-#                  /assets/public.js — public-pages PP-D1). A 401 here pops a login dialog on
-#                  a public page (the bug of 2026-08-01), so assets stay open: they are the
-#                  open-source bundle, no user data.
+#                  /assets/public.js). Assets stay open (no auth): a 401 here would pop a login
+#                  dialog on a public page, and they are the open-source bundle, no user data.
 #
 # Why one origin: the __Host- session cookie deliberately cannot span hostnames, and with the
 # registry and the workbench on one origin the cookie signs you in EVERYWHERE while CORS simply
 # never applies to first-party use. `my.philomatic.io` retires to a redirect below.
 #
-# Until sessions land at the instance (multiuser M-S2), /app stays behind basic auth the way
-# my.philomatic.io was. DELETE the basic_auth block when M-S2 ships — the session becomes the
-# credential and the workbench offers sign-in itself.
+# Sign-in is the workbench's own (Google via the registry), so /app carries NO auth here — the
+# session is the credential and the app offers the sign-in itself.
 #
 # NOTE the Caddyfile brace rule: `{` must END its line and `}` must be ALONE on its line —
 # one-line blocks are a parse error, and a failed reload silently keeps the OLD config.
@@ -28,25 +26,13 @@ philomatic.io {
 	# subdomains included (there is only the redirect host below, which should also be https).
 	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
 
-	# PUBLIC instance surfaces — never behind auth (the 2026-08-01 dialog-on-a-public-page bug).
-	@public path /assets/* /favicon.ico /health
-	handle @public {
+	# The instance: the workbench (/app*, BASE_PATH=/app), the shared UI bundle, health + favicon.
+	# Run the instance with BASE_PATH=/app — it strips the prefix itself; Caddy forwards untouched.
+	@instance path /app /app/* /assets/* /favicon.ico /health
+	handle @instance {
 		reverse_proxy 127.0.0.1:4321
 	}
-	# The workbench. Run the instance with BASE_PATH=/app — it strips the prefix itself; Caddy
-	# forwards the URL untouched.
-	@app path /app /app/*
-	handle @app {
-		# `basic_auth` requires Caddy 2.8+. On 2.6/2.7 the directive is `basicauth` (no
-		# underscore) — `caddy validate` reports it as an "unrecognized directive", which reads
-		# like a brace error and is not one. Check `caddy version` before believing the message.
-		basic_auth {
-			# generate the hash:  caddy hash-password --plaintext 'your-passphrase'
-			# REMOVE this block when M-S2 (sessions at the instance) ships.
-			you REPLACE_WITH_BCRYPT_HASH
-		}
-		reverse_proxy 127.0.0.1:4321
-	}
+	# Everything else → the registry: the library index, /t/* track pages, sign-in, accounts.
 	handle {
 		reverse_proxy 127.0.0.1:4400
 	}

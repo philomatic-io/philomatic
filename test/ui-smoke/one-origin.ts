@@ -67,7 +67,7 @@ export async function oneOriginStack(): Promise<OneOrigin> {
     }
   }
   // Route exactly as the deployed Caddyfile does.
-  const toInstance = (u: string) => u.startsWith('/app') || u.startsWith('/assets/') || u.startsWith('/ask/') || u === '/favicon.ico' || u === '/health';
+  const toInstance = (u: string) => u.startsWith('/app') || u.startsWith('/assets/') || u === '/favicon.ico' || u === '/health';
   const proxy = createServer((rq, rs) => (toInstance(rq.url ?? '/') ? instance : reg).emit('request', rq, rs));
   await new Promise<void>((r) => proxy.listen(port, '127.0.0.1', r));
 

@@ -19,8 +19,8 @@ needs no instance (it serves public pages itself).
 
 Production runs both behind one reverse proxy on one origin, routed by path:
 
-    /app*  /assets/*  /ask/*  /favicon.ico  /health   → the instance
-    everything else                                     → the registry
+    /app*  /assets/*  /favicon.ico  /health   → the instance
+    everything else                            → the registry
 
 The test fixture `test/ui-smoke/one-origin.ts` builds exactly this shape in-process — if you
 change the routing, change the fixture in the same commit.
